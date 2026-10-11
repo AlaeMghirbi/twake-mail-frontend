@@ -6,6 +6,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-11
+
+No setting changes from 0.5.0.
+
+### Added
+
+- Dark mode, from the `appearance.theme` setting of the account, and the
+  choice of the theme (Light, Dark or Auto) in Settings > Preferences.
+- Recipients move between To, Cc and Bcc by drag and drop, and dropping
+  emails on a field adds their senders.
+- In the advanced search, From and To take tags that drag between them,
+  the people are picked in a contact view and the folder in the
+  destination picker.
+- A desktop list row shows up to 3 labels.
+- The preview asks the password of an encrypted PDF.
+- The images pasted as data URLs in the editor are stored, with a spinner
+  while they upload.
+- In the facade of a team mailbox, New message sits at the end of the list
+  toolbar.
+
+### Fixed
+
+- The sidebar, the reading view, the composer, the search bar, the list
+  and the colours follow tmail-flutter more closely, and today's emails
+  show their time on 24 hours.
+- The signature images are scaled down and published as tmail-flutter
+  does, with the message of the server when it refuses them.
+- The facade of a team mailbox shows another mailbox without reloading,
+  keeps 16 px inside the frame of TwakeSpace, scrolls the reading view
+  inside it, and shows its error screens on its pane.
+- The spam report banner shows once a day, and its button reads « Voir »
+  in French.
+- A click on the background closes the file preview.
+- A long version breaks on the sign-in card, the pointer reaches the
+  tooltip of a label in a row, and a message loading on a phone keeps the
+  height it lands with.
+
 ## [0.5.0] - 2026-10-09
 
 No setting changes from 0.4.0.
