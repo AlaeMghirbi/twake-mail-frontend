@@ -9,7 +9,6 @@ import {
   type AssistantService,
   type CapabilityCall
 } from './assistant'
-import type { AssistantTool } from './assistantTools'
 
 export type AssistantIntentState =
   | { status: 'closed' }
@@ -31,20 +30,20 @@ type Created = { ok: true; service: AssistantService } | { ok: false }
 
 export function useAssistantIntent(
   sdk: Pick<Sdk, 'createIntent'> | null,
-  capabilities: AssistantTool[] | null,
+  config: AssistantConfig | null,
   handlers: AssistantIntentHandlers
 ): AssistantIntent {
   const frameRef = useRef<HTMLIFrameElement | null>(null)
   const [created, setCreated] = useState<Created | null>(null)
   const [isReady, setIsReady] = useState(false)
-  const capabilitiesRef = useRef(capabilities)
+  const configRef = useRef(config)
   const handlersRef = useRef(handlers)
   useEffect(() => {
-    capabilitiesRef.current = capabilities
+    configRef.current = config
     handlersRef.current = handlers
   })
 
-  const canStart = sdk !== null && capabilities !== null
+  const canStart = sdk !== null && config !== null
 
   useEffect(() => {
     if (!canStart) return undefined
@@ -84,10 +83,7 @@ export function useAssistantIntent(
       if (message === null) return
       switch (message.kind) {
         case 'ready': {
-          const config: AssistantConfig = {
-            capabilities: capabilitiesRef.current ?? []
-          }
-          frame.postMessage(config, service.origin)
+          frame.postMessage(configRef.current ?? {}, service.origin)
           return
         }
         case 'readyToUse':

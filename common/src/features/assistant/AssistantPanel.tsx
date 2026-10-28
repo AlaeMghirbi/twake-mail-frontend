@@ -1,4 +1,4 @@
-import { Typography } from '@linagora/twake-mui'
+import { Typography, useColorScheme } from '@linagora/twake-mui'
 import type { ReactElement } from 'react'
 
 import { SidePanel } from '@/ds/SidePanel/SidePanel'
@@ -10,7 +10,7 @@ import {
 } from '@common/features/platform/PlatformProvider'
 import { useI18n } from '@common/i18n/useI18n'
 
-import type { CapabilityCall } from './assistant'
+import type { AssistantConfig, CapabilityCall } from './assistant'
 import { createdDraftId } from './assistantTools'
 import { toCapability } from './capabilities'
 import { useAssistantPanel } from './AssistantProvider'
@@ -24,9 +24,13 @@ export function AssistantPanel(): ReactElement {
   const sdk = usePlatformSdk()
   const isPlatformReady = usePlatformStatus() === 'ready'
   const tools = useAssistantTools()
-  const capabilities = tools.isPending
+  const { colorScheme = 'light' } = useColorScheme()
+  const config: AssistantConfig | null = tools.isPending
     ? null
-    : (tools.data ?? []).map(tool => toCapability(tool, t))
+    : {
+        capabilities: (tools.data ?? []).map(tool => toCapability(tool, t)),
+        theme: { type: colorScheme }
+      }
   const runTool = useRunAssistantTool()
   const { openComposer } = useComposer()
   const { notify } = useNotify()
@@ -51,7 +55,7 @@ export function AssistantPanel(): ReactElement {
   }
   const { state, frameRef } = useAssistantIntent(
     isPlatformReady ? sdk : null,
-    capabilities,
+    config,
     { onCall: handleCall, onCancel: close }
   )
 
