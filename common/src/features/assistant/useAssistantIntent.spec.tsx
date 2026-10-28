@@ -3,24 +3,26 @@ import type { ReactElement } from 'react'
 
 import { renderWithProviders } from '@common/testing/renderWithProviders'
 
-import type { CapabilityCall } from './assistant'
-import type { AssistantTool } from './assistantTools'
+import type { AssistantConfig, CapabilityCall } from './assistant'
 import { useAssistantIntent } from './useAssistantIntent'
 
 const ASSISTANT_ORIGIN = 'https://alice-assistant.example.com'
 const INTENT_ID = 'intent-1'
 
-const CAPABILITIES: AssistantTool[] = [
-  {
-    name: 'create_draft',
-    description: 'Create a draft',
-    parameters: {
-      type: 'object',
-      properties: { body: { type: 'string' } },
-      required: ['body']
+const CONFIG: AssistantConfig = {
+  capabilities: [
+    {
+      name: 'create_draft',
+      description: 'Create a draft',
+      parameters: {
+        type: 'object',
+        properties: { body: { type: 'string' } },
+        required: ['body']
+      }
     }
-  }
-]
+  ],
+  theme: { type: 'dark' }
+}
 
 function makeSdk(): { createIntent: jest.Mock } {
   return {
@@ -35,18 +37,18 @@ function makeSdk(): { createIntent: jest.Mock } {
 
 interface ProbeProps {
   sdk: { createIntent: jest.Mock } | null
-  capabilities?: AssistantTool[] | null
+  config?: AssistantConfig | null
   onCall?: (call: CapabilityCall) => void
   onCancel?: () => void
 }
 
 function Probe({
   sdk,
-  capabilities = CAPABILITIES,
+  config = CONFIG,
   onCall = jest.fn(),
   onCancel = jest.fn()
 }: ProbeProps): ReactElement {
-  const { state, frameRef } = useAssistantIntent(sdk, capabilities, {
+  const { state, frameRef } = useAssistantIntent(sdk, config, {
     onCall,
     onCancel
   })
@@ -102,10 +104,10 @@ describe('useAssistantIntent', () => {
     })
   })
 
-  it('waits for the capabilities before opening', () => {
+  it('waits for its configuration before opening', () => {
     const sdk = makeSdk()
 
-    renderWithProviders(<Probe sdk={sdk} capabilities={null} />)
+    renderWithProviders(<Probe sdk={sdk} config={null} />)
 
     expect(screen.getByText('opening')).toBeInTheDocument()
     expect(sdk.createIntent).not.toHaveBeenCalled()
@@ -127,17 +129,14 @@ describe('useAssistantIntent', () => {
     expect(await screen.findByText('failed')).toBeInTheDocument()
   })
 
-  it('sends the capabilities to the assistant when it is ready', async () => {
+  it('sends the capabilities and the theme to the assistant when it is ready', async () => {
     renderWithProviders(<Probe sdk={makeSdk()} />)
     await screen.findByText('open')
     const postMessage = jest.spyOn(frameWindow(), 'postMessage')
 
     post('ready')
 
-    expect(postMessage).toHaveBeenCalledWith(
-      { capabilities: CAPABILITIES },
-      ASSISTANT_ORIGIN
-    )
+    expect(postMessage).toHaveBeenCalledWith(CONFIG, ASSISTANT_ORIGIN)
   })
 
   it('is ready once the assistant says so', async () => {
