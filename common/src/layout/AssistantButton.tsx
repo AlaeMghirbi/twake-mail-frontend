@@ -5,6 +5,7 @@ import type { ReactElement } from 'react'
 import { Sparkle } from '@/ds/FlutterIcons/FlutterIcons'
 import { hasAiCapability } from '@common/features/ai/aiNeedsAction'
 import { useAssistantPanel } from '@common/features/assistant/AssistantProvider'
+import { useIsAssistantInstalled } from '@common/features/assistant/useIsAssistantInstalled'
 import { usePlatformStatus } from '@common/features/platform/PlatformProvider'
 import { useI18n } from '@common/i18n/useI18n'
 import { useJmapSession } from '@common/jmap/JmapSessionProvider'
@@ -14,7 +15,14 @@ export function AssistantButton(): ReactElement | null {
   const { isOpen, toggle, openerRef } = useAssistantPanel()
   const isPlatformReady = usePlatformStatus() === 'ready'
   const { session, accountId } = useJmapSession()
-  if (!isPlatformReady || !hasAiCapability(session, accountId)) return null
+  const isAssistantInstalled = useIsAssistantInstalled()
+  if (
+    !isPlatformReady ||
+    !hasAiCapability(session, accountId) ||
+    !isAssistantInstalled
+  ) {
+    return null
+  }
   const label = t('assistant.open')
   return (
     <Tooltip title={label}>

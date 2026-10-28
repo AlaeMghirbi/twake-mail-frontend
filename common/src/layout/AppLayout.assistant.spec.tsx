@@ -26,6 +26,20 @@ jest.mock('cozy-external-bridge', () => ({
 const PLATFORM = 'https://alice.twake.example.com'
 const ASSISTANT_HREF = 'https://alice-assistant.twake.example.com/#/intents'
 
+const ASSISTANT_APP = {
+  id: 'io.cozy.apps/assistant',
+  type: 'io.cozy.apps',
+  attributes: { slug: 'assistant', name: 'Assistant' },
+  links: { related: 'https://alice-assistant.twake.example.com/' }
+}
+
+interface Servers {
+  /** The status of `/ai/v1/tools` */
+  toolsStatus?: number
+  /** Whether the Assistant app is installed on the platform */
+  hasAssistant?: boolean
+}
+
 const CREATE_DRAFT = {
   type: 'function',
   function: {
@@ -49,7 +63,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 function respond(
   url: URL,
   init: RequestInit | undefined,
-  toolsStatus: number
+  { toolsStatus = 200, hasAssistant = true }: Servers
 ): Response {
   if (url.href === `${FAKE_JMAP_ORIGIN}/ai/v1/tools`) {
     return jsonResponse({ tools: [CREATE_DRAFT] }, toolsStatus)
@@ -83,7 +97,7 @@ function respond(
     case '/settings/flags':
       return attributes({})
     case '/apps/':
-      return jsonResponse({ data: [] })
+      return jsonResponse({ data: hasAssistant ? [ASSISTANT_APP] : [] })
     default:
       return jsonResponse({ errors: [] }, init?.method === 'POST' ? 403 : 404)
   }
@@ -99,10 +113,10 @@ function requestUrl(input: RequestInfo | URL): string {
   return input instanceof URL ? input.href : input
 }
 
-function mockServers(toolsStatus = 200): FetchMock {
+function mockServers(servers: Servers = {}): FetchMock {
   const fetchMock: FetchMock = jest.fn(
     (input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
-      Promise.resolve(respond(new URL(requestUrl(input)), init, toolsStatus))
+      Promise.resolve(respond(new URL(requestUrl(input)), init, servers))
   )
   globalThis.fetch = fetchMock
   return fetchMock
@@ -181,7 +195,7 @@ describe('AppLayout with the assistant', () => {
   })
 
   it('opens the assistant without tools when tmail-backend refuses them', async () => {
-    mockServers(401)
+    mockServers({ toolsStatus: 401 })
     renderLayout()
 
     await userEvent.click(
@@ -218,6 +232,17 @@ describe('AppLayout with the assistant', () => {
     mockServers()
     renderLayout({ authService: makeFakeBasicAuthService() })
 
+    expect(await screen.findByText('Routed content')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'AI assistant' })).toBe(null)
+  })
+
+  it('is not offered when the Assistant app is not installed', async () => {
+    const fetchMock = mockServers({ hasAssistant: false })
+    renderLayout()
+
+    await waitFor(() => {
+      expect(calledUrls(fetchMock)).toContain(`${PLATFORM}/apps/`)
+    })
     expect(await screen.findByText('Routed content')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'AI assistant' })).toBe(null)
   })
