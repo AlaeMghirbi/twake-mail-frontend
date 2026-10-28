@@ -34,7 +34,7 @@ const DESKTOP_SX = {
 const FULL_SCREEN_SX = {
   position: 'fixed',
   inset: 0,
-  zIndex: 'modal',
+  zIndex: 'drawer',
   display: 'flex',
   flexDirection: 'column',
   bgcolor: 'background.paper'
