@@ -6,7 +6,11 @@ import { Route } from 'react-router'
 import { AppConfigProvider } from '@common/config/AppConfigProvider'
 import { resolveConfig } from '@common/config/config'
 import type { AuthService } from '@common/features/auth/types'
-import { FAKE_JMAP_ORIGIN } from '@common/testing/fakeJmapServer'
+import { AIBOT_CAPABILITY } from '@common/features/scribe/scribe'
+import {
+  FAKE_JMAP_ORIGIN,
+  makeFakeJmapServer
+} from '@common/testing/fakeJmapServer'
 import {
   makeFakeBasicAuthService,
   makeFakeOidcAuthService
@@ -123,18 +127,24 @@ function withConfig(ui: ReactElement): ReactElement {
   return <AppConfigProvider config={result.value}>{ui}</AppConfigProvider>
 }
 
-function renderLayout(
-  authService: AuthService = makeFakeOidcAuthService({
-    status: 'authenticated',
-    user: {
-      email: 'alice@example.com',
-      name: 'Alice Martin',
-      workplaceFqdn: 'alice.twake.example.com'
-    }
-  })
-): void {
+const SIGNED_IN = makeFakeOidcAuthService({
+  status: 'authenticated',
+  user: {
+    email: 'alice@example.com',
+    name: 'Alice Martin',
+    workplaceFqdn: 'alice.twake.example.com'
+  }
+})
+
+function renderLayout({
+  authService = SIGNED_IN,
+  hasAi = true
+}: { authService?: AuthService; hasAi?: boolean } = {}): void {
   renderWithProviders(withConfig(<AppLayout />), {
     authService,
+    jmapServer: makeFakeJmapServer({
+      capabilities: hasAi ? { [AIBOT_CAPABILITY]: {} } : {}
+    }),
     withJmapSession: true,
     childRoutes: <Route index element={<p>Routed content</p>} />
   })
@@ -206,7 +216,15 @@ describe('AppLayout with the assistant', () => {
 
   it('is not offered without the platform, in basic mode', async () => {
     mockServers()
-    renderLayout(makeFakeBasicAuthService())
+    renderLayout({ authService: makeFakeBasicAuthService() })
+
+    expect(await screen.findByText('Routed content')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'AI assistant' })).toBe(null)
+  })
+
+  it('is not offered to a user AI is not open to', async () => {
+    mockServers()
+    renderLayout({ hasAi: false })
 
     expect(await screen.findByText('Routed content')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'AI assistant' })).toBe(null)
