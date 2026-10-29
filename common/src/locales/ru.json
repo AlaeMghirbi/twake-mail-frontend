@@ -51,7 +51,9 @@
       "inReplyTo": "В ответ на",
       "email": "Письмо",
       "after": "После",
-      "before": "До"
+      "before": "До",
+      "limit": "Не более",
+      "page": "Страница"
     }
   },
   "sidebar": {

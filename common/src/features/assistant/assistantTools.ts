@@ -4,6 +4,8 @@
 
 import type { Session } from 'jmap-client-ts'
 
+import type { CapabilityParam } from './assistant'
+
 export interface ToolParameters {
   type: 'object'
   properties: Record<string, unknown>
@@ -97,7 +99,8 @@ export async function fetchAssistantTools(
 export interface ToolCall {
   id: string
   name: string
-  arguments: Record<string, string | string[]>
+  /** null for an argument the LLM could not fill: tmail-backend leaves it out */
+  arguments: Record<string, CapabilityParam>
 }
 
 export type ToolCallOutcome =

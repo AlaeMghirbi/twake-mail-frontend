@@ -18,7 +18,10 @@ const PARAM_TITLE_KEYS: Partial<Record<string, TranslationKey>> = {
   mailboxId: 'search.fields.folder',
   inMailboxes: 'search.fields.folder',
   after: 'assistant.params.after',
-  before: 'assistant.params.before'
+  before: 'assistant.params.before',
+  unread: 'search.filters.unread',
+  limit: 'assistant.params.limit',
+  page: 'assistant.params.page'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

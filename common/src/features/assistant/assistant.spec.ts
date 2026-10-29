@@ -84,13 +84,35 @@ describe('parseAssistantMessage', () => {
     expect(parseAssistantMessage(data, INTENT_ID)).toBe(null)
   })
 
-  it('ignores a call with parameters that are not strings', () => {
+  it('reads the numbers, the booleans and the unknown values of a call', () => {
+    const data = message('result', {
+      result: {
+        capability: 'search_emails',
+        params: { from: 'alae', limit: 10, unread: true, page: null }
+      }
+    })
+
+    expect(parseAssistantMessage(data, INTENT_ID)).toEqual({
+      kind: 'capabilityCall',
+      call: {
+        capability: 'search_emails',
+        params: { from: 'alae', limit: 10, unread: true, page: null },
+        text: null
+      }
+    })
+  })
+
+  it('ignores a call with parameters the protocol does not send', () => {
     const call = (params: unknown): unknown =>
       message('result', { result: { capability: 'list_emails', params } })
 
-    expect(parseAssistantMessage(call({ limit: 10 }), INTENT_ID)).toBe(null)
     expect(parseAssistantMessage(call({ ids: [1, 'b'] }), INTENT_ID)).toBe(null)
-    expect(parseAssistantMessage(call({ limit: null }), INTENT_ID)).toBe(null)
+    expect(
+      parseAssistantMessage(call({ filter: { unread: true } }), INTENT_ID)
+    ).toBe(null)
+    expect(parseAssistantMessage(call({ limit: Infinity }), INTENT_ID)).toBe(
+      null
+    )
   })
 
   it('ignores the messages of another intent, and anything else', () => {
