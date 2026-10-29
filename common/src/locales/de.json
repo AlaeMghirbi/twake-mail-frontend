@@ -51,7 +51,9 @@
       "inReplyTo": "Antwort auf",
       "email": "E-Mail",
       "after": "Nach dem",
-      "before": "Vor dem"
+      "before": "Vor dem",
+      "limit": "Höchstens",
+      "page": "Seite"
     }
   },
   "sidebar": {

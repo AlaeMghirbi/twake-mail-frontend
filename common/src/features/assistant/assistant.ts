@@ -29,9 +29,11 @@ export function assistantService(intent: {
   }
 }
 
+export type CapabilityParam = string | string[] | number | boolean | null
+
 export interface CapabilityCall {
   capability: string
-  params: Record<string, string | string[]>
+  params: Record<string, CapabilityParam>
   text: string | null
 }
 
@@ -45,18 +47,21 @@ function isRecord(data: unknown): data is Record<string, unknown> {
   return typeof data === 'object' && data !== null
 }
 
-// The protocol sends strings and arrays of strings only (`params` of a
-// Result): anything else is not a call of the assistant
-function isParamValue(value: unknown): value is string | string[] {
+// The protocol sends strings, numbers, booleans, null and arrays of strings
+// (`params` of a Result): anything else is not a call of the assistant
+function isParamValue(value: unknown): value is CapabilityParam {
   return (
+    value === null ||
     typeof value === 'string' ||
+    typeof value === 'boolean' ||
+    (typeof value === 'number' && Number.isFinite(value)) ||
     (Array.isArray(value) && value.every(item => typeof item === 'string'))
   )
 }
 
-function readParams(value: unknown): Record<string, string | string[]> | null {
+function readParams(value: unknown): Record<string, CapabilityParam> | null {
   if (!isRecord(value) || Array.isArray(value)) return null
-  const params: Record<string, string | string[]> = {}
+  const params: Record<string, CapabilityParam> = {}
   for (const [name, param] of Object.entries(value)) {
     if (!isParamValue(param)) return null
     params[name] = param

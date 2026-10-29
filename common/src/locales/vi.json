@@ -51,7 +51,9 @@
       "inReplyTo": "Trả lời cho",
       "email": "Email",
       "after": "Sau ngày",
-      "before": "Trước ngày"
+      "before": "Trước ngày",
+      "limit": "Tối đa",
+      "page": "Trang"
     }
   },
   "sidebar": {
