@@ -1,8 +1,7 @@
-import { Icon } from '@linagora/twake-icons'
+import { Assistant, Icon } from '@linagora/twake-icons'
 import { IconButton, Tooltip } from '@linagora/twake-mui'
 import type { ReactElement } from 'react'
 
-import { Sparkle } from '@/ds/FlutterIcons/FlutterIcons'
 import { hasAiCapability } from '@common/features/ai/aiNeedsAction'
 import { useAssistantPanel } from '@common/features/assistant/AssistantProvider'
 import { useIsAssistantInstalled } from '@common/features/assistant/useIsAssistantInstalled'
@@ -33,7 +32,7 @@ export function AssistantButton(): ReactElement | null {
         onClick={toggle}
         data-testid="top-bar-assistant-button"
       >
-        <Icon icon={Sparkle} />
+        <Icon icon={Assistant} />
       </IconButton>
     </Tooltip>
   )

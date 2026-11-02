@@ -1,4 +1,4 @@
-import { Icon } from '@linagora/twake-icons'
+import { Cross, Icon } from '@linagora/twake-icons'
 import {
   Box,
   CircularProgress,
@@ -13,7 +13,6 @@ import {
   type RefObject
 } from 'react'
 
-import { Cross } from '@/ds/FlutterIcons/FlutterIcons'
 import { useScreenSize } from '@/ds/useScreenSize/useScreenSize'
 
 export const SIDE_PANEL_WIDTH = 365
