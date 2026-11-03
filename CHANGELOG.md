@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-03
+
+No setting changed since 0.7.0.
+
+### Changed
+
+- The dialogs (confirmations, folder, label, identity and rule editors,
+  recovery, date range and folder picker) are twake-mui's dialogs.
+- The checkboxes are twake-mui's Checkbox, with twake-icons' glyphs for
+  select all.
+- The sidebar, the compose button, the email list, the settings, the
+  vacation and shortcuts switches and the storage card follow the Teammail
+  Figma more closely.
+- The label colour is picked in twake-mui's ColorList, and the advanced
+  search uses twake-mui's fields.
+- twake-mui 19.2.1, twake-sdk 1.2.0 and twake-bar 1.1.2.
+
+### Fixed
+
+- The back chevron of the navigation is drawn at its full size.
+- The swatches of the label colour are named for a screen reader.
+- The toolbar of the list keeps its height when emails are selected.
+
 ## [0.7.0] - 2026-10-28
 
 Settings changed since 0.6.0: `TDRIVE_INTENT_URL` (and `config.tdrive.intentUrl`
