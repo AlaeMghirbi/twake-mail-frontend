@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-06
+
+No setting changed since 0.8.0.
+
+### Added
+
+- On a phone, the drawer opens the menus of a folder or a label on a long
+  press, and its settings sit at its foot. The bar of the mail hides while
+  an email or the settings are open.
+- The folder search of the sidebar takes the focus and has a back button.
+
+### Changed
+
+- The composer follows the Figma: title bar with minimize, full screen and
+  close only, emoji and Reply to in the More menu, filled recipient chips,
+  and the signature in the text after "---".
+- The list rows are 44 px high with 32 px actions, the first label of a row
+  shows with the others behind "+N", and the selection toolbar, the star and
+  the row marks follow the Figma.
+- Every dialog has the frame of the design, and the label, folder, rule and
+  recovery dialogs match the Figma. The label colour is picked from a popover
+  beside its name.
+- The settings menu, its pages (preferences, folders, identities,
+  forwarding, vacation, shortcuts, rules) and the advanced search follow the
+  Figma.
+- The sidebar rows, indents and chevrons are at the design's sizes.
+- Email bodies are set in the Regular text style.
+
+### Fixed
+
+- The initials of a name are taken in any script.
+- The error reporting switch stays while the server settings load.
+- A vacation that has ended shows its status chip off, and a start that has
+  passed can be reopened on "Right away".
+- The sidebar labels come back after the drawer closes during a search.
+
 ## [0.8.0] - 2026-11-03
 
 No setting changed since 0.7.0.
