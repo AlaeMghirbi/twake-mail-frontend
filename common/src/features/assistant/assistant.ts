@@ -7,7 +7,17 @@ export const ASSISTANT_INTENT = {
 
 export interface AssistantConfig {
   capabilities?: AssistantTool[]
+  /** The app gives back the result of each call: the LLM goes on with it */
+  capabilityResults?: boolean
   theme?: { type: 'light' | 'dark' }
+}
+
+// What a call gave, for the LLM (twake-assistant/docs/assistant-intent.md,
+// "The result of a call")
+export interface CapabilityResult {
+  callId: string
+  ok: boolean
+  content: string
 }
 
 export interface AssistantService {
@@ -35,6 +45,7 @@ export interface CapabilityCall {
   capability: string
   params: Record<string, CapabilityParam>
   text: string | null
+  callId: string | null
 }
 
 export type AssistantMessage =
@@ -76,7 +87,11 @@ function readCapabilityCall(result: unknown): CapabilityCall | null {
   return {
     capability: result.capability,
     params,
-    text: typeof result.text === 'string' ? result.text : null
+    text: typeof result.text === 'string' ? result.text : null,
+    callId:
+      typeof result.callId === 'string' && result.callId !== ''
+        ? result.callId
+        : null
   }
 }
 

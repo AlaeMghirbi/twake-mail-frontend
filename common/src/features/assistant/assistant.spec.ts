@@ -51,7 +51,8 @@ describe('parseAssistantMessage', () => {
       call: {
         capability: 'create_draft',
         params: { to: ['paul@example.com'], subject: '', body: 'Bonjour' },
-        text: null
+        text: null,
+        callId: null
       }
     })
   })
@@ -71,7 +72,8 @@ describe('parseAssistantMessage', () => {
       call: {
         capability: 'write_report',
         params: { title: 'Report' },
-        text: '# Report\n\nThe text'
+        text: '# Report\n\nThe text',
+        callId: null
       }
     })
   })
@@ -97,8 +99,26 @@ describe('parseAssistantMessage', () => {
       call: {
         capability: 'search_emails',
         params: { from: 'alae', limit: 10, unread: true, page: null },
-        text: null
+        text: null,
+        callId: null
       }
+    })
+  })
+
+  it('reads the id of a call, given back with its result', () => {
+    const call = (callId: unknown): unknown =>
+      message('result', {
+        result: { capability: 'list_emails', params: {}, callId }
+      })
+
+    expect(parseAssistantMessage(call('m4'), INTENT_ID)).toMatchObject({
+      call: { callId: 'm4' }
+    })
+    expect(parseAssistantMessage(call(''), INTENT_ID)).toMatchObject({
+      call: { callId: null }
+    })
+    expect(parseAssistantMessage(call(4), INTENT_ID)).toMatchObject({
+      call: { callId: null }
     })
   })
 

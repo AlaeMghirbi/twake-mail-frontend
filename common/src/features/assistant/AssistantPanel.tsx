@@ -10,8 +10,12 @@ import {
 } from '@common/features/platform/PlatformProvider'
 import { useI18n } from '@common/i18n/useI18n'
 
-import type { AssistantConfig, CapabilityCall } from './assistant'
-import { createdDraftId } from './assistantTools'
+import type {
+  AssistantConfig,
+  CapabilityCall,
+  CapabilityResult
+} from './assistant'
+import { createdDraftId, toCapabilityResult } from './assistantTools'
 import { toCapability } from './capabilities'
 import { useAssistantPanel } from './AssistantProvider'
 import { useAssistantIntent } from './useAssistantIntent'
@@ -29,29 +33,33 @@ export function AssistantPanel(): ReactElement {
     ? null
     : {
         capabilities: (tools.data ?? []).map(tool => toCapability(tool, t)),
+        capabilityResults: true,
         theme: { type: colorScheme }
       }
   const runTool = useRunAssistantTool()
   const { openComposer } = useComposer()
   const { notify } = useNotify()
 
-  const handleCall = (call: CapabilityCall): void => {
-    const notifyFailure = (): void => {
+  // The result goes back to the LLM, which tells the user when the tool
+  // failed: a call without an id has no result, the app tells it then
+  const handleCall = async (
+    call: CapabilityCall
+  ): Promise<CapabilityResult | null> => {
+    const outcome = await runTool(call).catch(() => ({
+      ok: false as const,
+      status: null
+    }))
+    if (!outcome.ok && call.callId === null) {
       notify({ message: t('assistant.toolFailed'), severity: 'error' })
     }
-    runTool(call)
-      .then(outcome => {
-        if (!outcome.ok) {
-          notifyFailure()
-          return
-        }
-        const draftId =
-          call.capability === 'create_draft'
-            ? createdDraftId(outcome.content)
-            : null
-        if (draftId !== null) openComposer({ draftId })
-      })
-      .catch(notifyFailure)
+    const draftId =
+      outcome.ok && call.capability === 'create_draft'
+        ? createdDraftId(outcome.content)
+        : null
+    if (draftId !== null) openComposer({ draftId })
+    return call.callId === null
+      ? null
+      : toCapabilityResult(call.callId, outcome)
   }
   const { state, frameRef } = useAssistantIntent(
     isPlatformReady ? sdk : null,

@@ -4,7 +4,7 @@
 
 import type { Session } from 'jmap-client-ts'
 
-import type { CapabilityParam } from './assistant'
+import type { CapabilityParam, CapabilityResult } from './assistant'
 
 export interface ToolParameters {
   type: 'object'
@@ -16,6 +16,7 @@ export interface AssistantTool {
   name: string
   description: string
   parameters: ToolParameters
+  confirm: boolean
 }
 
 export class AssistantToolsError extends Error {
@@ -66,9 +67,13 @@ function readTool(entry: unknown): AssistantTool | null {
     return null
   }
   const parameters = readParameters(tool.parameters)
-  return parameters === null
-    ? null
-    : { name: tool.name, description: tool.description, parameters }
+  if (parameters === null) return null
+  return {
+    name: tool.name,
+    description: tool.description,
+    parameters,
+    confirm: entry.confirm !== false
+  }
 }
 
 export async function fetchAssistantTools(
@@ -135,6 +140,25 @@ export async function executeAssistantTool(
     return { ok: true, content }
   } catch {
     return { ok: false, status: null }
+  }
+}
+
+// The outcome of a tool for the LLM: what tmail-backend answered, or why the
+// tool could not run
+export function toCapabilityResult(
+  callId: string,
+  outcome: ToolCallOutcome
+): CapabilityResult {
+  if (outcome.ok) {
+    return { callId, ok: true, content: JSON.stringify(outcome.content) }
+  }
+  return {
+    callId,
+    ok: false,
+    content:
+      outcome.status === null
+        ? 'The mail server gave no result.'
+        : `The mail server answered ${outcome.status}.`
   }
 }
 

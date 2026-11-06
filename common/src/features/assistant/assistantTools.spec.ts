@@ -3,11 +3,13 @@ import {
   assistantToolsUrl,
   createdDraftId,
   executeAssistantTool,
+  toCapabilityResult,
   fetchAssistantTools
 } from './assistantTools'
 
 const CREATE_DRAFT = {
   type: 'function',
+  confirm: true,
   function: {
     name: 'create_draft',
     description: 'Create a draft',
@@ -21,6 +23,7 @@ const CREATE_DRAFT = {
 
 const LIST_EMAILS = {
   type: 'function',
+  confirm: false,
   function: {
     name: 'list_emails',
     description: 'List the emails',
@@ -56,10 +59,28 @@ describe('fetchAssistantTools', () => {
       fetchFunction
     })
 
-    expect(result).toEqual([CREATE_DRAFT.function, LIST_EMAILS.function])
+    expect(result).toEqual([
+      { ...CREATE_DRAFT.function, confirm: true },
+      { ...LIST_EMAILS.function, confirm: false }
+    ])
     expect(fetchFunction).toHaveBeenCalledWith(url, {
       headers: { Accept: 'application/json', Authorization: 'Bearer token' }
     })
+  })
+
+  it('asks the user first for a tool that does not say it only reads', async () => {
+    const tool = (confirm: unknown): unknown => ({
+      type: 'function',
+      function: CREATE_DRAFT.function,
+      ...(confirm === undefined ? {} : { confirm })
+    })
+    const fetchFunction = answering(200, {
+      tools: [tool(undefined), tool('false'), tool(null)]
+    })
+
+    const result = await fetchAssistantTools(url, null, { fetchFunction })
+
+    expect(result.map(({ confirm }) => confirm)).toEqual([true, true, true])
   })
 
   it('leaves out a tool it cannot read', async () => {
@@ -77,7 +98,7 @@ describe('fetchAssistantTools', () => {
 
     const result = await fetchAssistantTools(url, null, { fetchFunction })
 
-    expect(result).toEqual([CREATE_DRAFT.function])
+    expect(result).toEqual([{ ...CREATE_DRAFT.function, confirm: true }])
   })
 
   it('fails with the status when the server refuses', async () => {
@@ -179,5 +200,29 @@ describe('createdDraftId', () => {
   it('is null for another result', () => {
     expect(createdDraftId({ emails: [] })).toBe(null)
     expect(createdDraftId(null)).toBe(null)
+  })
+})
+
+describe('toCapabilityResult', () => {
+  it('gives the LLM what tmail-backend found', () => {
+    expect(
+      toCapabilityResult('m4', {
+        ok: true,
+        content: { emails: [{ id: 'e1' }] }
+      })
+    ).toEqual({ callId: 'm4', ok: true, content: '{"emails":[{"id":"e1"}]}' })
+  })
+
+  it('tells the LLM why the tool could not run', () => {
+    expect(toCapabilityResult('m4', { ok: false, status: 503 })).toEqual({
+      callId: 'm4',
+      ok: false,
+      content: 'The mail server answered 503.'
+    })
+    expect(toCapabilityResult('m4', { ok: false, status: null })).toEqual({
+      callId: 'm4',
+      ok: false,
+      content: 'The mail server gave no result.'
+    })
   })
 })

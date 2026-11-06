@@ -12,7 +12,8 @@ const CREATE_DRAFT = {
       unknown: { type: 'string', description: 'A param of a later version' }
     },
     required: ['body']
-  }
+  },
+  confirm: true
 }
 
 function t(key: string): string {

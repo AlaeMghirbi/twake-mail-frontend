@@ -7,7 +7,8 @@ import {
   parseAssistantMessage,
   type AssistantConfig,
   type AssistantService,
-  type CapabilityCall
+  type CapabilityCall,
+  type CapabilityResult
 } from './assistant'
 
 export type AssistantIntentState =
@@ -17,7 +18,7 @@ export type AssistantIntentState =
   | { status: 'failed' }
 
 export interface AssistantIntentHandlers {
-  onCall: (call: CapabilityCall) => void
+  onCall: (call: CapabilityCall) => Promise<CapabilityResult | null>
   onCancel: () => void
 }
 
@@ -90,7 +91,21 @@ export function useAssistantIntent(
           setIsReady(true)
           return
         case 'capabilityCall':
-          handlersRef.current.onCall(message.call)
+          handlersRef.current
+            .onCall(message.call)
+            .then(result => {
+              if (result === null) return
+              frameRef.current?.contentWindow?.postMessage(
+                {
+                  type: `intent-${service.intentId}:data`,
+                  data: { ...configRef.current, capabilityResult: result }
+                },
+                service.origin
+              )
+            })
+            .catch((error: unknown) => {
+              console.warn('[assistant] The call could not run', error)
+            })
           return
         case 'cancel':
           handlersRef.current.onCancel()
