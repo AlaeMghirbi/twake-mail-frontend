@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The logotype is a file the image serves at the path of tmail-flutter's
+  (`/usr/share/nginx/html/assets/assets/images/ic_logo_with_text.svg`, plus
+  `ic_logo_with_text_dark.svg` for the dark scheme): mounting another SVG
+  over it changes the logo without a rebuild. Helm chart:
+  `logotype.configMap`. See `docs/deployment.md`.
 - `ALLOWED_LANGUAGES` (tmail-flutter's key, e.g. `mn,en`) limits the
   languages of Settings > Language and region, in its order; the language of
   the account, of the browser or the one chosen earlier is skipped when it is
