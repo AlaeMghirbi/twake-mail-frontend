@@ -7,8 +7,8 @@ import {
   parseAssistantMessage,
   type AssistantConfig,
   type AssistantService,
-  type CapabilityCall,
-  type CapabilityResult
+  type ToolCall,
+  type ToolResult
 } from './assistant'
 
 export type AssistantIntentState =
@@ -18,7 +18,7 @@ export type AssistantIntentState =
   | { status: 'failed' }
 
 export interface AssistantIntentHandlers {
-  onCall: (call: CapabilityCall) => Promise<CapabilityResult | null>
+  onCall: (call: ToolCall) => Promise<ToolResult | null>
   onCancel: () => void
 }
 
@@ -90,7 +90,7 @@ export function useAssistantIntent(
         case 'readyToUse':
           setIsReady(true)
           return
-        case 'capabilityCall':
+        case 'toolCall':
           handlersRef.current
             .onCall(message.call)
             .then(result => {
@@ -98,7 +98,7 @@ export function useAssistantIntent(
               frameRef.current?.contentWindow?.postMessage(
                 {
                   type: `intent-${service.intentId}:data`,
-                  data: { ...configRef.current, capabilityResult: result }
+                  data: { ...configRef.current, toolResult: result }
                 },
                 service.origin
               )

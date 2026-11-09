@@ -3,7 +3,7 @@ import {
   assistantToolsUrl,
   createdDraftId,
   executeAssistantTool,
-  toCapabilityResult,
+  toToolResult,
   fetchAssistantTools
 } from './assistantTools'
 
@@ -175,12 +175,25 @@ describe('executeAssistantTool', () => {
     ).toEqual({ ok: true, content: { id: 'draft-1', subject: 'Réunion' } })
   })
 
-  it('fails with the status tmail-backend answers', async () => {
-    const fetchFunction = answering(400, { detail: "Missing 'body'" })
+  it('fails with the status and the detail tmail-backend answers', async () => {
+    const fetchFunction = answering(400, {
+      status: 400,
+      detail: "Missing 'body'"
+    })
 
     expect(
       await executeAssistantTool(URL, null, CALL, { fetchFunction })
-    ).toEqual({ ok: false, status: 400 })
+    ).toEqual({ ok: false, status: 400, detail: "Missing 'body'" })
+  })
+
+  it('fails without detail for an error that is not a problem', async () => {
+    const fetchFunction = jest.fn(() =>
+      Promise.resolve(new Response('Bad gateway', { status: 502 }))
+    )
+
+    expect(
+      await executeAssistantTool(URL, null, CALL, { fetchFunction })
+    ).toEqual({ ok: false, status: 502, detail: null })
   })
 
   it('fails without status for an answer that is not a tool message', async () => {
@@ -188,7 +201,7 @@ describe('executeAssistantTool', () => {
 
     expect(
       await executeAssistantTool(URL, null, CALL, { fetchFunction })
-    ).toEqual({ ok: false, status: null })
+    ).toEqual({ ok: false, status: null, detail: null })
   })
 })
 
@@ -203,24 +216,43 @@ describe('createdDraftId', () => {
   })
 })
 
-describe('toCapabilityResult', () => {
+describe('toToolResult', () => {
   it('gives the LLM what tmail-backend found', () => {
     expect(
-      toCapabilityResult('m4', {
+      toToolResult('m4', {
         ok: true,
         content: { emails: [{ id: 'e1' }] }
       })
-    ).toEqual({ callId: 'm4', ok: true, content: '{"emails":[{"id":"e1"}]}' })
+    ).toEqual({
+      messageId: 'm4',
+      ok: true,
+      content: '{"emails":[{"id":"e1"}]}'
+    })
   })
 
   it('tells the LLM why the tool could not run', () => {
-    expect(toCapabilityResult('m4', { ok: false, status: 503 })).toEqual({
-      callId: 'm4',
+    expect(
+      toToolResult('m4', {
+        ok: false,
+        status: 400,
+        detail: 'Invalid mailbox id: Inbox'
+      })
+    ).toEqual({
+      messageId: 'm4',
+      ok: false,
+      content: 'The mail server answered 400: Invalid mailbox id: Inbox'
+    })
+    expect(
+      toToolResult('m4', { ok: false, status: 503, detail: null })
+    ).toEqual({
+      messageId: 'm4',
       ok: false,
       content: 'The mail server answered 503.'
     })
-    expect(toCapabilityResult('m4', { ok: false, status: null })).toEqual({
-      callId: 'm4',
+    expect(
+      toToolResult('m4', { ok: false, status: null, detail: null })
+    ).toEqual({
+      messageId: 'm4',
       ok: false,
       content: 'The mail server gave no result.'
     })

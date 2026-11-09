@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 import { useAuthService } from '@common/features/auth/AuthProvider'
 import { useJmapSession } from '@common/jmap/JmapSessionProvider'
 
-import type { CapabilityCall } from './assistant'
+import type { ToolCall } from './assistant'
 import {
   assistantToolsUrl,
   executeAssistantTool,
@@ -11,17 +11,17 @@ import {
 } from './assistantTools'
 
 export function useRunAssistantTool(): (
-  call: CapabilityCall
+  call: ToolCall
 ) => Promise<ToolCallOutcome> {
   const service = useAuthService()
   const { session } = useJmapSession()
   const url = assistantToolsUrl(session)
   return useCallback(
-    async (call: CapabilityCall): Promise<ToolCallOutcome> => {
+    async (call: ToolCall): Promise<ToolCallOutcome> => {
       const authorization = await service.getAuthorizationHeader()
       return executeAssistantTool(url, authorization, {
         id: crypto.randomUUID(),
-        name: call.capability,
+        name: call.tool,
         arguments: call.params
       })
     },

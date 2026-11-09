@@ -38,29 +38,29 @@ describe('parseAssistantMessage', () => {
     })
   })
 
-  it('reads the call of a capability the LLM picked', () => {
+  it('reads the call of a tool the LLM picked', () => {
     const data = message('result', {
       result: {
-        capability: 'create_draft',
+        tool: 'create_draft',
         params: { to: ['paul@example.com'], subject: '', body: 'Bonjour' }
       }
     })
 
     expect(parseAssistantMessage(data, INTENT_ID)).toEqual({
-      kind: 'capabilityCall',
+      kind: 'toolCall',
       call: {
-        capability: 'create_draft',
+        tool: 'create_draft',
         params: { to: ['paul@example.com'], subject: '', body: 'Bonjour' },
         text: null,
-        callId: null
+        messageId: null
       }
     })
   })
 
-  it('reads the content of a capability with one', () => {
+  it('reads the content of a tool with one', () => {
     const data = message('result', {
       result: {
-        capability: 'write_report',
+        tool: 'write_report',
         params: { title: 'Report' },
         text: '# Report\n\nThe text',
         format: 'markdown'
@@ -68,12 +68,12 @@ describe('parseAssistantMessage', () => {
     })
 
     expect(parseAssistantMessage(data, INTENT_ID)).toEqual({
-      kind: 'capabilityCall',
+      kind: 'toolCall',
       call: {
-        capability: 'write_report',
+        tool: 'write_report',
         params: { title: 'Report' },
         text: '# Report\n\nThe text',
-        callId: null
+        messageId: null
       }
     })
   })
@@ -89,42 +89,53 @@ describe('parseAssistantMessage', () => {
   it('reads the numbers, the booleans and the unknown values of a call', () => {
     const data = message('result', {
       result: {
-        capability: 'search_emails',
+        tool: 'search_emails',
         params: { from: 'alae', limit: 10, unread: true, page: null }
       }
     })
 
     expect(parseAssistantMessage(data, INTENT_ID)).toEqual({
-      kind: 'capabilityCall',
+      kind: 'toolCall',
       call: {
-        capability: 'search_emails',
+        tool: 'search_emails',
         params: { from: 'alae', limit: 10, unread: true, page: null },
         text: null,
-        callId: null
+        messageId: null
       }
     })
   })
 
-  it('reads the id of a call, given back with its result', () => {
-    const call = (callId: unknown): unknown =>
+  it('reads the id of the message of a call, given back with its result', () => {
+    const call = (messageId: unknown): unknown =>
       message('result', {
-        result: { capability: 'list_emails', params: {}, callId }
+        result: { tool: 'list_emails', params: {}, messageId }
       })
 
     expect(parseAssistantMessage(call('m4'), INTENT_ID)).toMatchObject({
-      call: { callId: 'm4' }
+      call: { messageId: 'm4' }
     })
     expect(parseAssistantMessage(call(''), INTENT_ID)).toMatchObject({
-      call: { callId: null }
+      call: { messageId: null }
     })
     expect(parseAssistantMessage(call(4), INTENT_ID)).toMatchObject({
-      call: { callId: null }
+      call: { messageId: null }
+    })
+  })
+
+  it('reads a call of an older assistant, under the former names', () => {
+    const data = message('result', {
+      result: { capability: 'list_emails', params: {}, callId: 'm4' }
+    })
+
+    expect(parseAssistantMessage(data, INTENT_ID)).toEqual({
+      kind: 'toolCall',
+      call: { tool: 'list_emails', params: {}, text: null, messageId: 'm4' }
     })
   })
 
   it('ignores a call with parameters the protocol does not send', () => {
     const call = (params: unknown): unknown =>
-      message('result', { result: { capability: 'list_emails', params } })
+      message('result', { result: { tool: 'list_emails', params } })
 
     expect(parseAssistantMessage(call({ ids: [1, 'b'] }), INTENT_ID)).toBe(null)
     expect(

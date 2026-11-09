@@ -6,16 +6,17 @@ export const ASSISTANT_INTENT = {
 }
 
 export interface AssistantConfig {
-  capabilities?: AssistantTool[]
+  tools?: AssistantTool[]
   /** The app gives back the result of each call: the LLM goes on with it */
-  capabilityResults?: boolean
+  toolResults?: boolean
   theme?: { type: 'light' | 'dark' }
 }
 
-// What a call gave, for the LLM (twake-assistant/docs/assistant-intent.md,
-// "The result of a call")
-export interface CapabilityResult {
-  callId: string
+// What a call gave, for the LLM, with the id of the message of the stack that
+// holds the call (twake-assistant/docs/assistant-intent.md, "The result of a
+// call")
+export interface ToolResult {
+  messageId: string
   ok: boolean
   content: string
 }
@@ -39,20 +40,20 @@ export function assistantService(intent: {
   }
 }
 
-export type CapabilityParam = string | string[] | number | boolean | null
+export type ToolParam = string | string[] | number | boolean | null
 
-export interface CapabilityCall {
-  capability: string
-  params: Record<string, CapabilityParam>
+export interface ToolCall {
+  tool: string
+  params: Record<string, ToolParam>
   text: string | null
-  callId: string | null
+  messageId: string | null
 }
 
 export type AssistantMessage =
   | { kind: 'ready' }
   | { kind: 'readyToUse' }
   | { kind: 'cancel' }
-  | { kind: 'capabilityCall'; call: CapabilityCall }
+  | { kind: 'toolCall'; call: ToolCall }
 
 function isRecord(data: unknown): data is Record<string, unknown> {
   return typeof data === 'object' && data !== null
@@ -60,7 +61,7 @@ function isRecord(data: unknown): data is Record<string, unknown> {
 
 // The protocol sends strings, numbers, booleans, null and arrays of strings
 // (`params` of a Result): anything else is not a call of the assistant
-function isParamValue(value: unknown): value is CapabilityParam {
+function isParamValue(value: unknown): value is ToolParam {
   return (
     value === null ||
     typeof value === 'string' ||
@@ -70,9 +71,9 @@ function isParamValue(value: unknown): value is CapabilityParam {
   )
 }
 
-function readParams(value: unknown): Record<string, CapabilityParam> | null {
+function readParams(value: unknown): Record<string, ToolParam> | null {
   if (!isRecord(value) || Array.isArray(value)) return null
-  const params: Record<string, CapabilityParam> = {}
+  const params: Record<string, ToolParam> = {}
   for (const [name, param] of Object.entries(value)) {
     if (!isParamValue(param)) return null
     params[name] = param
@@ -80,18 +81,22 @@ function readParams(value: unknown): Record<string, CapabilityParam> | null {
   return params
 }
 
-function readCapabilityCall(result: unknown): CapabilityCall | null {
-  if (!isRecord(result) || typeof result.capability !== 'string') return null
+function readText(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null
+}
+
+// `capability` and `callId` are the former names of `tool` and `messageId`,
+// sent by an assistant older than twake-assistant#150
+function readToolCall(result: unknown): ToolCall | null {
+  if (!isRecord(result)) return null
+  const tool = readText(result.tool) ?? readText(result.capability)
   const params = readParams(result.params)
-  if (params === null) return null
+  if (tool === null || params === null) return null
   return {
-    capability: result.capability,
+    tool,
     params,
     text: typeof result.text === 'string' ? result.text : null,
-    callId:
-      typeof result.callId === 'string' && result.callId !== ''
-        ? result.callId
-        : null
+    messageId: readText(result.messageId) ?? readText(result.callId)
   }
 }
 
@@ -107,6 +112,6 @@ export function parseAssistantMessage(
     return { kind }
   }
   if (kind !== 'result') return null
-  const call = readCapabilityCall(data.result)
-  return call === null ? null : { kind: 'capabilityCall', call }
+  const call = readToolCall(data.result)
+  return call === null ? null : { kind: 'toolCall', call }
 }

@@ -1,10 +1,10 @@
 // The tools of the AI assistant that tmail-backend offers (`GET /ai/v1/tools`,
-// in the OpenAI function calling format), sent as the capabilities of the
+// in the OpenAI function calling format), sent as the tools of the
 // Assistant intent (twake-assistant/docs/assistant-intent.md, "Capability").
 
 import type { Session } from 'jmap-client-ts'
 
-import type { CapabilityParam, CapabilityResult } from './assistant'
+import type { ToolParam, ToolResult } from './assistant'
 
 export interface ToolParameters {
   type: 'object'
@@ -105,11 +105,31 @@ export interface ToolCall {
   id: string
   name: string
   /** null for an argument the LLM could not fill: tmail-backend leaves it out */
-  arguments: Record<string, CapabilityParam>
+  arguments: Record<string, ToolParam>
 }
 
 export type ToolCallOutcome =
-  { ok: true; content: unknown } | { ok: false; status: number | null }
+  | { ok: true; content: unknown }
+  | {
+      ok: false
+      status: number | null
+      /** why, as the problem details of tmail-backend say it */
+      detail: string | null
+    }
+
+// The `detail` of the problem details of an error of tmail-backend
+async function readProblemDetail(response: Response): Promise<string | null> {
+  try {
+    const json: unknown = await response.json()
+    return isRecord(json) &&
+      typeof json.detail === 'string' &&
+      json.detail !== ''
+      ? json.detail
+      : null
+  } catch {
+    return null
+  }
+}
 
 export async function executeAssistantTool(
   url: string,
@@ -130,35 +150,43 @@ export async function executeAssistantTool(
       function: { name: call.name, arguments: call.arguments }
     })
   })
-  if (!response.ok) return { ok: false, status: response.status }
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      detail: await readProblemDetail(response)
+    }
+  }
   const json: unknown = await response.json()
   if (!isRecord(json) || typeof json.content !== 'string') {
-    return { ok: false, status: null }
+    return { ok: false, status: null, detail: null }
   }
   try {
     const content: unknown = JSON.parse(json.content)
     return { ok: true, content }
   } catch {
-    return { ok: false, status: null }
+    return { ok: false, status: null, detail: null }
   }
 }
 
 // The outcome of a tool for the LLM: what tmail-backend answered, or why the
-// tool could not run
-export function toCapabilityResult(
-  callId: string,
+// tool could not run, for the LLM to call it again in another way
+export function toToolResult(
+  messageId: string,
   outcome: ToolCallOutcome
-): CapabilityResult {
+): ToolResult {
   if (outcome.ok) {
-    return { callId, ok: true, content: JSON.stringify(outcome.content) }
+    return { messageId, ok: true, content: JSON.stringify(outcome.content) }
   }
   return {
-    callId,
+    messageId,
     ok: false,
     content:
       outcome.status === null
         ? 'The mail server gave no result.'
-        : `The mail server answered ${outcome.status}.`
+        : `The mail server answered ${outcome.status}${
+            outcome.detail === null ? '.' : `: ${outcome.detail}`
+          }`
   }
 }
 

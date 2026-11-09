@@ -3,18 +3,14 @@ import type { ReactElement } from 'react'
 
 import { renderWithProviders } from '@common/testing/renderWithProviders'
 
-import type {
-  AssistantConfig,
-  CapabilityCall,
-  CapabilityResult
-} from './assistant'
+import type { AssistantConfig, ToolCall, ToolResult } from './assistant'
 import { useAssistantIntent } from './useAssistantIntent'
 
 const ASSISTANT_ORIGIN = 'https://alice-assistant.example.com'
 const INTENT_ID = 'intent-1'
 
 const CONFIG: AssistantConfig = {
-  capabilities: [
+  tools: [
     {
       name: 'create_draft',
       description: 'Create a draft',
@@ -26,7 +22,7 @@ const CONFIG: AssistantConfig = {
       confirm: true
     }
   ],
-  capabilityResults: true,
+  toolResults: true,
   theme: { type: 'dark' }
 }
 
@@ -44,7 +40,7 @@ function makeSdk(): { createIntent: jest.Mock } {
 interface ProbeProps {
   sdk: { createIntent: jest.Mock } | null
   config?: AssistantConfig | null
-  onCall?: (call: CapabilityCall) => Promise<CapabilityResult | null>
+  onCall?: (call: ToolCall) => Promise<ToolResult | null>
   onCancel?: () => void
 }
 
@@ -135,7 +131,7 @@ describe('useAssistantIntent', () => {
     expect(await screen.findByText('failed')).toBeInTheDocument()
   })
 
-  it('sends the capabilities and the theme to the assistant when it is ready', async () => {
+  it('sends the tools and the theme to the assistant when it is ready', async () => {
     renderWithProviders(<Probe sdk={makeSdk()} />)
     await screen.findByText('open')
     const postMessage = jest.spyOn(frameWindow(), 'postMessage')
@@ -154,25 +150,25 @@ describe('useAssistantIntent', () => {
     expect(screen.getByText('open ready')).toBeInTheDocument()
   })
 
-  it('hands back the capability the LLM picked', async () => {
+  it('hands back the tool the LLM picked', async () => {
     const onCall = jest.fn(() => Promise.resolve(null))
     renderWithProviders(<Probe sdk={makeSdk()} onCall={onCall} />)
     await screen.findByText('open')
 
     post('result', {
-      result: { capability: 'create_draft', params: { body: 'Bonjour' } }
+      result: { tool: 'create_draft', params: { body: 'Bonjour' } }
     })
 
     expect(onCall).toHaveBeenCalledWith({
-      capability: 'create_draft',
+      tool: 'create_draft',
       params: { body: 'Bonjour' },
       text: null,
-      callId: null
+      messageId: null
     })
   })
 
   it('gives the assistant the result of a call, with the whole configuration', async () => {
-    const result = { callId: 'm4', ok: true, content: '{"emails":[]}' }
+    const result = { messageId: 'm4', ok: true, content: '{"emails":[]}' }
     const onCall = jest.fn(() => Promise.resolve(result))
     renderWithProviders(<Probe sdk={makeSdk()} onCall={onCall} />)
     await screen.findByText('open')
@@ -180,9 +176,9 @@ describe('useAssistantIntent', () => {
 
     post('result', {
       result: {
-        capability: 'search_emails',
+        tool: 'search_emails',
         params: { from: 'Claire' },
-        callId: 'm4'
+        messageId: 'm4'
       }
     })
     await act(async () => {
@@ -192,7 +188,7 @@ describe('useAssistantIntent', () => {
     expect(postMessage).toHaveBeenCalledWith(
       {
         type: `intent-${INTENT_ID}:data`,
-        data: { ...CONFIG, capabilityResult: result }
+        data: { ...CONFIG, toolResult: result }
       },
       ASSISTANT_ORIGIN
     )
@@ -204,7 +200,7 @@ describe('useAssistantIntent', () => {
     const postMessage = jest.spyOn(frameWindow(), 'postMessage')
 
     post('result', {
-      result: { capability: 'create_draft', params: { body: 'Bonjour' } }
+      result: { tool: 'create_draft', params: { body: 'Bonjour' } }
     })
     await act(async () => {
       await Promise.resolve()
@@ -228,7 +224,7 @@ describe('useAssistantIntent', () => {
     renderWithProviders(<Probe sdk={makeSdk()} onCall={onCall} />)
     await screen.findByText('open')
     const result = {
-      result: { capability: 'create_draft', params: { body: 'Bonjour' } }
+      result: { tool: 'create_draft', params: { body: 'Bonjour' } }
     }
 
     post('result', result, { origin: 'https://evil.example.com' })

@@ -10,12 +10,8 @@ import {
 } from '@common/features/platform/PlatformProvider'
 import { useI18n } from '@common/i18n/useI18n'
 
-import type {
-  AssistantConfig,
-  CapabilityCall,
-  CapabilityResult
-} from './assistant'
-import { createdDraftId, toCapabilityResult } from './assistantTools'
+import type { AssistantConfig, ToolCall, ToolResult } from './assistant'
+import { createdDraftId, toToolResult } from './assistantTools'
 import { toCapability } from './capabilities'
 import { useAssistantPanel } from './AssistantProvider'
 import { useAssistantIntent } from './useAssistantIntent'
@@ -32,8 +28,8 @@ export function AssistantPanel(): ReactElement {
   const config: AssistantConfig | null = tools.isPending
     ? null
     : {
-        capabilities: (tools.data ?? []).map(tool => toCapability(tool, t)),
-        capabilityResults: true,
+        tools: (tools.data ?? []).map(tool => toCapability(tool, t)),
+        toolResults: true,
         theme: { type: colorScheme }
       }
   const runTool = useRunAssistantTool()
@@ -42,24 +38,23 @@ export function AssistantPanel(): ReactElement {
 
   // The result goes back to the LLM, which tells the user when the tool
   // failed: a call without an id has no result, the app tells it then
-  const handleCall = async (
-    call: CapabilityCall
-  ): Promise<CapabilityResult | null> => {
+  const handleCall = async (call: ToolCall): Promise<ToolResult | null> => {
     const outcome = await runTool(call).catch(() => ({
       ok: false as const,
-      status: null
+      status: null,
+      detail: null
     }))
-    if (!outcome.ok && call.callId === null) {
+    if (!outcome.ok && call.messageId === null) {
       notify({ message: t('assistant.toolFailed'), severity: 'error' })
     }
     const draftId =
-      outcome.ok && call.capability === 'create_draft'
+      outcome.ok && call.tool === 'create_draft'
         ? createdDraftId(outcome.content)
         : null
     if (draftId !== null) openComposer({ draftId })
-    return call.callId === null
+    return call.messageId === null
       ? null
-      : toCapabilityResult(call.callId, outcome)
+      : toToolResult(call.messageId, outcome)
   }
   const { state, frameRef } = useAssistantIntent(
     isPlatformReady ? sdk : null,
