@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-10
+
+New settings since 0.9.0: `ALLOWED_LANGUAGES` (Helm chart:
+`config.allowedLanguages`) and the Helm chart's `logotype.configMap`, both
+below.
+
 ### Added
 
 - The logotype is a file the image serves at the path of tmail-flutter's
@@ -18,7 +24,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the account, of the browser or the one chosen earlier is skipped when it is
   not listed (English if listed, else the first one). Unset, every language
   is offered.
-  
+- On a phone, the rows of the drawer keep their menu button and Clean.
+- The Folders header of the sidebar shows the hidden folders in place, the
+  folder search links to Settings > Folder visibility, and the folder groups
+  of that page fold.
+- The rules settings count the rules above their list.
+
+### Changed
+
+- The composer has its More menu on desktop and tablet again, the emoji
+  button of its footer, the Reply to button on the To line and the Signature
+  pill, which folds the signature (so does its separator line).
+- A desktop row of the list shows up to three labels again.
+- Recipient chips with an avatar are pills, the avatar 4 px from the edge and
+  from the name, as in the design library.
+- The sending dialog leaves 24 px under its progress bar, has a divider under
+  its title, and a close cross beside its Close button when the server is
+  slow.
+
+### Fixed
+
+- Typing in the feedback form no longer triggers the keyboard shortcuts of
+  the mail, and the form stays inside the screen when its button sits at the
+  top (`@linagora/twake-feedback` 1.1.2).
+- A contact's address is suggested once, under the contact's name.
+- On tablets and phones, the top bar cannot be reached under the selection
+  bar.
+- Search results name a team mailbox folder with its team mailbox, and a date
+  bound the server cannot express is dropped from the search.
+- The list stays in place after deleting a selection.
+- "Label as" sends its choice in one request.
+- An invitation tells it was canceled when the server refuses the answer.
+- A team mailbox root is recognised by its namespace.
+- In a reply, a quoted `<pre>` is split around the blocks it holds, and
+  quoted spans without a colour, font or size are dropped.
+- The link dialog refuses a bare host that does not parse as a URL.
+- On a phone, the rows of the drawer stay 36 px high with their actions, and
+  the help of the mail stays under the Workplace in the bar.
+- Saving a vacation keeps a start that has passed.
+
+### Security
+
+- DOMPurify, which cleans every received email, is at least 3.4.17.
+
 ## [0.9.0] - 2026-11-06
 
 No setting changed since 0.8.0.
