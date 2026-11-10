@@ -9,6 +9,12 @@ export interface AssistantConfig {
   tools?: AssistantTool[]
   /** The app gives back the result of each call: the LLM goes on with it */
   toolResults?: boolean
+  /**
+   * false: the LLM answers alone, with the rules of the tools, instead of
+   * openRAG answering from the documents of the user (who can still turn
+   * the Drive source on)
+   */
+  documents?: boolean
   theme?: { type: 'light' | 'dark' }
 }
 

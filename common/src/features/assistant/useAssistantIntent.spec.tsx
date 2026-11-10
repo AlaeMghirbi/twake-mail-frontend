@@ -23,6 +23,7 @@ const CONFIG: AssistantConfig = {
     }
   ],
   toolResults: true,
+  documents: false,
   theme: { type: 'dark' }
 }
 

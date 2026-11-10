@@ -30,6 +30,9 @@ export function AssistantPanel(): ReactElement {
     : {
         tools: (tools.data ?? []).map(tool => toCapability(tool, t)),
         toolResults: true,
+        // The answers come from the emails, through the tools: with the
+        // documents, openRAG's own prompt takes over and no tool is called
+        documents: false,
         theme: { type: colorScheme }
       }
   const runTool = useRunAssistantTool()
