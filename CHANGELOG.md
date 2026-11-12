@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-12
+
+No setting changed since 0.11.0.
+
+### Changed
+
+- On phones and tablets, the drawer shows no menu button on its rows nor
+  Clean on Spam: a long press on a folder or a label opens its menu, Clean
+  included.
+- On phones and tablets, the top bar of the list has neither the filter icon
+  nor the help: the search field opens the filters, and the help is in
+  Settings.
+
 ## [0.11.0] - 2026-11-12
 
 No setting changed since 0.10.0. The image is built on Node 26.
