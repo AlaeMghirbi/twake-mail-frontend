@@ -5,6 +5,7 @@ import { ComposerPage } from './ComposerPage'
 import { EmailPage } from './EmailPage'
 import { SettingsPage } from './SettingsPage'
 import { openAccountMenuIfAny } from '../support/accountMenu'
+import { longPress } from '../support/longPress'
 
 /** A folder of the sidebar, by JMAP role (`inbox`, `trash`...) or by displayed name */
 export type FolderRef =
@@ -38,11 +39,13 @@ export class MailboxPage {
   readonly folderDrawer: Locator
   readonly addFolderButton: Locator
   readonly folderSearchButton: Locator
-  /** The search of folders: the panel, its field, the count it announces, its results */
+  /** The search of folders: the panel, its back button, its field, the count it announces, its results, its link to Folder visibility */
   readonly folderSearch: Locator
+  readonly folderSearchBackButton: Locator
   readonly folderSearchInput: Locator
   readonly folderSearchStatus: Locator
   readonly folderSearchResults: Locator
+  readonly folderSearchVisibilityLink: Locator
   readonly emailList: Locator
   readonly emptyListView: Locator
   readonly composeButton: Locator
@@ -66,6 +69,8 @@ export class MailboxPage {
   readonly mailboxNameDialog: Locator
   readonly teamMailboxesSection: Locator
   readonly showHiddenFoldersButton: Locator
+  /** The folders other users share with the user, below the team mailboxes */
+  readonly otherUsersSection: Locator
   /** The titles of the sidebar sections, buttons that collapse them */
   readonly foldersSectionToggle: Locator
   readonly teamMailboxesSectionToggle: Locator
@@ -80,9 +85,13 @@ export class MailboxPage {
     this.addFolderButton = page.getByTestId('add-new-folder-button')
     this.folderSearchButton = page.getByTestId('mailbox-search-button')
     this.folderSearch = page.getByTestId('mailbox-search')
+    this.folderSearchBackButton = page.getByTestId('mailbox-search-back-button')
     this.folderSearchInput = page.getByTestId('mailbox-search-input')
     this.folderSearchStatus = page.getByTestId('mailbox-search-status')
     this.folderSearchResults = page.getByTestId('mailbox-search-results')
+    this.folderSearchVisibilityLink = page.getByTestId(
+      'mailbox-search-visibility-link'
+    )
     this.emailList = page.getByTestId('email-list')
     this.emptyListView = page.getByTestId('empty-thread-view')
     this.composeButton = page.getByTestId('compose-email-button')
@@ -103,6 +112,7 @@ export class MailboxPage {
     this.showHiddenFoldersButton = page.getByTestId(
       'show-hidden-folders-button'
     )
+    this.otherUsersSection = page.getByTestId('other-users-section')
     this.foldersSectionToggle = page.getByTestId('folders-section-toggle')
     this.teamMailboxesSectionToggle = page.getByTestId(
       'team-mailboxes-section-toggle'
@@ -257,11 +267,17 @@ export class MailboxPage {
     return tree.locator('[role="treeitem"][tabindex="0"]')
   }
 
-  /** Folder actions menu (⋮ on hover, or right-click): New subfolder, Rename, Move, Delete, Empty trash... */
+  /** Folder actions menu (⋮ on hover, or a long press on a phone, which has no ⋮): New subfolder, Rename, Move, Delete, Empty trash... */
   async openFolderMenu(ref: FolderRef): Promise<Locator> {
     await this.showFolders()
-    await this.folder(ref).hover()
-    await this.folder(ref).getByTestId('mailbox-more-button').click()
+    const row = this.folder(ref)
+    const more = row.getByTestId('mailbox-more-button')
+    if ((await more.count()) > 0) {
+      await row.hover()
+      await more.click()
+    } else {
+      await longPress(this.page, row.getByTestId('mailbox-item-name'))
+    }
     const menu = this.page.getByTestId('mailbox-context-menu').getByRole('menu')
     await expect(menu).toBeVisible()
     return menu

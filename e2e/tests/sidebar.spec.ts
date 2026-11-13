@@ -3,6 +3,7 @@ import type { Locator } from '@playwright/test'
 import { LoginPage } from '../pages'
 import { expectNoA11yViolations } from '../support/a11y'
 import { expect, test } from '../support/fixtures'
+import { longPress } from '../support/longPress'
 
 test.describe('SBR sidebar rows and compose button', () => {
   test('SBR-01 the selected row covers the whole row, 36 px high at least', async ({
@@ -102,15 +103,42 @@ test.describe('SBR sidebar rows and compose button', () => {
     'SBR-05 a hidden folder keeps its whole name and says it is hidden without colour',
     { tag: '@mobile' },
     async ({ page, user, jmap }) => {
+      // Short enough for the search results, narrower than the tree
+      await jmap.createMailbox({ name: 'Rarely used' })
+      const mailbox = await new LoginPage(page).loginAs(user)
+      await mailbox.runFolderAction({ name: 'Rarely used' }, 'hide')
+      await mailbox.searchFolders('rarely')
+
+      const row = mailbox.folder({ name: 'Rarely used' })
+      await expect(row).toHaveAttribute('data-hidden', 'true')
+      // The word is for assistive technology; the icon is the visible sign
+      await expect(row.getByTestId('mailbox-item-hidden')).toHaveText('hidden')
+      await expect(row.getByRole('link')).toHaveAccessibleName(
+        /Rarely used\s+hidden/
+      )
+      const name = row.getByTestId('mailbox-item-name')
+      const isCut = await name.evaluate(el => el.scrollWidth > el.clientWidth)
+      expect(isCut).toBe(false)
+      await expectNoA11yViolations(page)
+    }
+  )
+
+  test(
+    'SBR-05b a hidden folder listed on demand keeps its whole name in the tree',
+    { tag: '@mobile' },
+    async ({ page, user, jmap }) => {
       await jmap.createMailbox({ name: 'A rarely used folder' })
       const mailbox = await new LoginPage(page).loginAs(user)
       await mailbox.runFolderAction({ name: 'A rarely used folder' }, 'hide')
       await mailbox.showFolders()
       await mailbox.showHiddenFoldersButton.click()
+      await expect(mailbox.showHiddenFoldersButton).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
 
       const row = mailbox.folder({ name: 'A rarely used folder' })
       await expect(row).toHaveAttribute('data-hidden', 'true')
-      // The word is for assistive technology; the icon is the visible sign
       await expect(row.getByTestId('mailbox-item-hidden')).toHaveText('hidden')
       await expect(row.getByRole('link')).toHaveAccessibleName(
         /A rarely used folder\s+hidden/
@@ -153,6 +181,50 @@ test.describe('SBR sidebar rows and compose button', () => {
     )
     await expect(clean).toHaveCount(0)
   })
+
+  test(
+    'SBR-06b in the drawer of a phone or a tablet the rows have no ⋮ nor "Clean": a long press opens the menu, emptying the Spam and the Trash, or of a label',
+    { tag: '@mobile' },
+    async ({ page, user, jmap }) => {
+      // The drawer: below the desktop size of the app, 1200 px
+      test.skip(
+        (page.viewportSize()?.width ?? 0) >= 1200,
+        'the drawer of a phone or a tablet'
+      )
+      await jmap.createLabel('Design', '#21B930')
+      for (const saveTo of ['junk', 'trash'] as const) {
+        await jmap.sendEmail({
+          to: user.email,
+          subject: `in ${saveTo}`,
+          text: 'x',
+          saveTo
+        })
+        await jmap.waitForEmail({
+          subject: `in ${saveTo}`,
+          mailboxRole: saveTo
+        })
+      }
+      const mailbox = await new LoginPage(page).loginAs(user)
+      await mailbox.showFolders()
+
+      const spam = mailbox.folder({ role: 'junk' })
+      await expect(spam.getByTestId('mailbox-clean-button')).toHaveCount(0)
+      await expect(spam.getByTestId('mailbox-more-button')).toHaveCount(0)
+      let menu = await mailbox.openFolderMenu({ role: 'junk' })
+      await expect(menu.getByTestId('mailbox-action-empty-spam')).toBeVisible()
+      await page.keyboard.press('Escape')
+      menu = await mailbox.openFolderMenu({ role: 'trash' })
+      await expect(menu.getByTestId('mailbox-action-empty-trash')).toBeVisible()
+      await page.keyboard.press('Escape')
+
+      const label = page.getByTestId('label-item').filter({
+        has: page.getByRole('link', { name: 'Design', exact: true })
+      })
+      await expect(label.getByTestId('label-item-menu-button')).toHaveCount(0)
+      await longPress(page, label.getByRole('link', { name: 'Design' }))
+      await expect(page.getByTestId('label-edit-item')).toBeVisible()
+    }
+  )
 
   test('SBR-07 the folder search is the field of the design system, flat, 40 px high', async ({
     page,

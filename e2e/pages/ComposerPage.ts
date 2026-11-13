@@ -92,6 +92,12 @@ export class ComposerPage {
     return menu.getByRole('menuitem').or(menu.getByRole('menuitemcheckbox'))
   }
 
+  /** Opens the emoji picker, from the More menu */
+  async openEmojiPicker(): Promise<void> {
+    await this.moreButton.click()
+    await this.page.getByTestId('composer-emoji-item').click()
+  }
+
   /** The horizontal overflow of the page and of the window, in px (0: none) */
   async horizontalOverflow(): Promise<{ page: number; window: number }> {
     return this.page.evaluate(
@@ -243,7 +249,7 @@ export class ComposerPage {
   }
 
   /**
-   * Opens From, Cc, Bcc or Reply-To: by its text button, or on a phone by the
+   * Opens From, Cc, Bcc or Reply-To by its text button, or on a phone by the
    * chevron showing them all
    */
   private async openOptionalLine(
@@ -369,14 +375,13 @@ export class ComposerPage {
   }
 
   /** Closes a modified message, answering the "Save message" dialog */
-  async closeAnd(choice: 'save' | 'discard' | 'cancel'): Promise<ComposerPage> {
+  async closeAnd(choice: 'save' | 'discard'): Promise<ComposerPage> {
     await this.closeButton.click()
     const dialog = this.page.getByTestId('confirm-dialog')
     await expect(dialog).toBeVisible()
     const button = {
       save: 'confirm-dialog-confirm-button',
-      discard: 'confirm-dialog-alternative-button',
-      cancel: 'confirm-dialog-cancel-button'
+      discard: 'confirm-dialog-alternative-button'
     }[choice]
     await dialog.getByTestId(button).click()
     await expect(dialog).toBeHidden()

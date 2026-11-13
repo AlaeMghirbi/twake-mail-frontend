@@ -1,10 +1,9 @@
 import {
-  Icon,
   AssistantColor,
   Bottom,
   Copy,
   Warning,
-  Cross,
+  CrossMedium,
   Refresh,
   Send,
   Assistant
@@ -17,7 +16,10 @@ import {
   type ReactElement
 } from 'react'
 
-import { ActionIconButton } from '@/ds/ActionIconButton/ActionIconButton'
+import {
+  ActionIcon,
+  ActionIconButton
+} from '@/ds/ActionIconButton/ActionIconButton'
 import { AiScribeBar } from '@/ds/AiScribeBar/AiScribeBar'
 import {
   AiScribeMenu,
@@ -331,7 +333,7 @@ export function ScribeMenu({
         className="u-ml-half"
         data-testid="composer-scribe-button"
       >
-        <Icon icon={AssistantColor} size={24} aria-hidden="true" />
+        <ActionIcon icon={AssistantColor} />
       </ActionIconButton>
       <AiScribePopover
         open={isMenuOpen}
@@ -377,7 +379,7 @@ export function ScribeMenu({
         icons={{
           sparkle: Assistant,
           warning: Warning,
-          close: Cross,
+          close: CrossMedium,
           copy: Copy,
           retry: Refresh,
           chevron: Bottom

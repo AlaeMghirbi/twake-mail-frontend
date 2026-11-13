@@ -61,6 +61,7 @@
     "newMessage": "Compose",
     "folders": "Folders",
     "teamMailboxes": "Team-mailboxes",
+    "otherUsers": "Other users",
     "version": "version %{version}",
     "personalFolders": "Personal folders"
   },
@@ -252,9 +253,10 @@
     },
     "toolbar": {
       "label": "List actions",
-      "filter": "Filter messages",
+      "filter": "Filter",
       "clearFilter": "Clear the filter",
-      "selectPage": "Select all messages of this page",
+      "selectPage": "Select all",
+      "selectPageTooltip": "Select all messages of this page",
       "filterOn": "You’ve filtered messages by \"%{name}\"",
       "filterOff": "You’ve disabled filtered messages",
       "filters": {
@@ -385,7 +387,6 @@
     "send": "Send",
     "saveAsDraft": "Save as draft",
     "print": "Print",
-    "signature": "Signature",
     "fields": {
       "to": "To",
       "cc": "Cc",
@@ -570,6 +571,10 @@
       "english": "English",
       "russian": "Russian",
       "vietnamese": "Vietnamese",
+      "mongolian": "Mongolian",
+      "german": "German",
+      "spanish": "Spanish",
+      "italian": "Italian",
       "helpMeWrite": "Help me write",
       "failed": "Failed to generate AI response",
       "generating": "Generating response",
@@ -608,7 +613,9 @@
     },
     "images": {
       "inserting": "Inserting the image"
-    }
+    },
+    "hideSignature": "Hide signature",
+    "showSignature": "Show signature"
   },
   "layout": {
     "navigation": "Navigation"
@@ -684,7 +691,6 @@
     "wordsHint": "Separate words with commas",
     "loading": "Loading suggestions",
     "suggestionCount": "%{smart_count} suggestion |||| %{smart_count} suggestions",
-    "searchWithFilters": "Search with these filters",
     "quickFiltersOnly": "No suggestions. The quick filters follow the search field.",
     "labels": {
       "all": "All labels",
@@ -791,7 +797,7 @@
     "categories": {
       "navigation": "Navigation & Closing",
       "reading": "Reading & Replying",
-      "management": "Message Management & Selection",
+      "management": "Message & Selection",
       "label": "Categories of shortcuts",
       "navigationShort": "Navigation",
       "readingShort": "Reading",
@@ -801,6 +807,7 @@
   "settings": {
     "title": "Settings",
     "manageAccount": "Manage account",
+    "more": "More",
     "sections": {
       "profiles": {
         "title": "Profiles",
@@ -844,26 +851,19 @@
       }
     },
     "preferences": {
-      "thread": "Thread",
       "threadDescription": "View multiple related emails like a conversation",
-      "readReceipts": "Email read receipts",
       "readReceiptsDescription": "Read receipts are notifications that can be sent to and from your users to verify that mail has been read.",
       "readReceiptsToggle": "Always request read receipts with outgoing messages",
-      "senderPriority": "Sender-set important flag",
       "senderPriorityDescription": "Enables display of important emails flag in your inbox. This feature is controlled by the sender and thus could result in abuses.",
       "senderPriorityToggle": "Display sender-set important flag",
-      "remoteImages": "Remote images",
       "remoteImagesDescription": "Show the images and other content that emails load from the Internet without asking. They tell the sender when and where you read the email.",
       "remoteImagesToggle": "Show remote images",
       "remoteImagesWarning": "Always showing remote images exposes you to activity tracking and thus could harm your privacy.",
       "threadToggle": "Enable thread",
-      "spamReports": "Spam reports",
       "spamReportsDescription": "Reminds you that you need to moderate your spam emails recurringly",
       "spamReportsToggle": "Enable spam report",
-      "labels": "Label visibility",
       "labelsDescription": "Show labels assigned to emails directly in your message list for easier categorization.",
       "labelsToggle": "Display labels",
-      "driveAttachment": "Drive attachment",
       "driveAttachmentDescription": "Show or hide the Twake Drive attachment button in the composer",
       "driveAttachmentToggle": "Enable Drive attachment button",
       "accessibility": "Accessibility",
@@ -874,15 +874,18 @@
       "themeLight": "Light",
       "themeDark": "Dark",
       "themeAuto": "Auto",
-      "errorReporting": "Error reporting",
       "errorReportingDescription": "Send crash and error reports so the support team can diagnose problems you run into. Your emails, their content and their recipients are never included.",
       "errorReportingToggle": "Send error reports",
-      "aiLabelCategorization": "Label categorisation",
       "aiLabelCategorizationDescription": "Apply my labels on incoming emails using their description",
       "aiLabelCategorizationToggle": "Enable label categorisation",
-      "aiScribe": "AI Scribe",
       "aiScribeDescription": "Use AI to help write and improve your emails",
-      "aiScribeToggle": "Enable AI Scribe"
+      "aiScribeToggle": "Enable AI Scribe",
+      "groups": {
+        "privacy": "Privacy",
+        "inbox": "Inbox",
+        "smartFeatures": "Smart features",
+        "writing": "Writing"
+      }
     },
     "backToMail": "Back to mail",
     "language": {
@@ -995,12 +998,14 @@
       "success": "This folder is shown again"
     },
     "visibility": {
-      "hide": "Hide",
-      "show": "Show",
       "personal": "Personal folders",
       "team": "Team-mailboxes",
       "hideOf": "Hide %{name}",
-      "showOf": "Show %{name}"
+      "showOf": "Show %{name}",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "alwaysVisible": "Always visible",
+      "stateAction": "%{state}: %{action}"
     },
     "search": {
       "label": "Search for folders",
@@ -1012,6 +1017,7 @@
       "progress": "Moving emails: %{moved} of %{total}"
     },
     "clean": "Clean",
+    "longPressHint": "Long press for actions",
     "progress": {
       "markAsRead": "Marking all messages in \"%{folderName}\" as read",
       "empty": "Emptying \"%{folderName}\""
@@ -1080,7 +1086,7 @@
     "empty": {
       "title": "No Rules Configured",
       "message": "Start by creating your first rule to automate email management.",
-      "action": "Create My First Rule"
+      "action": "Create your first rule"
     },
     "delete": {
       "title": "Delete rule",
@@ -1216,7 +1222,10 @@
     "externalBanner": "You are redirecting emails to another domain. This could be a security threat or considered illegal data extraction.",
     "listLabel": "Forwarding addresses",
     "removeOf": "Remove %{email}",
-    "inputLabel": "New recipient",
+    "inputLabel": "Add a recipient",
+    "pasteHint": "Paste several addresses",
+    "emptyTitle": "Forwarding is off",
+    "emptyText": "Add an address above and every new email you receive will also be sent there.",
     "recipientCount": "%{smart_count} recipient |||| %{smart_count} recipients",
     "selectAll": "Select all",
     "selectedCount": "%{count} selected",
@@ -1230,11 +1239,22 @@
   },
   "vacation": {
     "enable": "Automatically reply to messages when they are received.",
+    "responder": "Vacation responder",
+    "starts": "Starts:",
+    "ends": "Ends:",
+    "rightAway": "Right away",
+    "pickTime": "Pick a time",
+    "untilTurnedOff": "When I turn it off",
+    "statusOn": "On",
+    "statusOff": "Off",
     "startDate": "Start date",
     "startTime": "Start time",
-    "stops": "Vacation stops at",
     "endDate": "End date",
     "endTime": "End time",
+    "selectStartDate": "Select start date",
+    "selectStartTime": "Select start time",
+    "selectEndDate": "Select end date",
+    "selectEndTime": "Select end time",
     "subject": "Subject",
     "subjectPlaceholder": "Enter subject",
     "message": "Message",
@@ -1271,6 +1291,7 @@
       "description": "Description (optional)",
       "descriptionPlaceholder": "Add a short description to explain what this label is for",
       "color": "Choose a label color",
+      "colorCurrent": "Label color: %{color}",
       "create": "Create label"
     },
     "errors": {
@@ -1312,6 +1333,9 @@
     "colorNone": "No color",
     "colors": {
       "navyBlue": "Navy blue",
+      "skyBlue": "Sky blue",
+      "brightBlue": "Bright blue",
+      "royalBlue": "Royal blue",
       "purple": "Purple",
       "lavender": "Lavender",
       "indigo": "Indigo",
@@ -1454,6 +1478,7 @@
     },
     "replyFailed": "Event reply was sent unsuccessfully!",
     "alreadyAnswered": "You have already given this answer to the invitation",
+    "eventCanceled": "This event was canceled",
     "counterAccepted": "You accepted the proposed time for this meeting",
     "eventLabel": "Event: %{title}",
     "allDay": "All day",
@@ -1475,6 +1500,10 @@
       "onDays": "on %{days}",
       "count": "%{smart_count} time |||| %{smart_count} times",
       "until": "until %{date}"
+    },
+    "occurrence": {
+      "only": "This occurrence only",
+      "originally": "This occurrence only (originally %{date})"
     },
     "untitled": "(No title)",
     "eventMark": "Event invitation"

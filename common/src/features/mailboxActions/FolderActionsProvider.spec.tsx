@@ -158,8 +158,23 @@ describe('Folder actions', () => {
     expect(field).toHaveAccessibleDescription(
       'This folder name is already taken'
     )
+    const announcement = within(dialog).getByTestId('mailbox-name-announcement')
+    expect(announcement).toHaveAttribute('role', 'status')
+    expect(announcement).toHaveTextContent('This folder name is already taken')
+    // A refused submit puts the message in again, for it to be said again
+    const announced = announcement.firstElementChild
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Create folder' })
+    )
+    expect(screen.getByRole('dialog', { name: 'Create a New Folder' })).toBe(
+      dialog
+    )
+    expect(field).toHaveFocus()
+    expect(announcement).toHaveTextContent('This folder name is already taken')
+    expect(announcement.firstElementChild).not.toBe(announced)
     await userEvent.clear(field)
     await userEvent.type(field, 'Projects')
+    expect(announcement).toHaveTextContent('')
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Create folder' })
     )
@@ -546,7 +561,7 @@ describe('Folder actions', () => {
     ).toBeEmptyDOMElement()
   })
 
-  it('hides a folder and its subfolders, then shows it on demand', async () => {
+  it('hides a folder and its subfolders, then shows it from the folder search', async () => {
     const server = makeServer()
     await renderTree(server)
 
@@ -561,9 +576,8 @@ describe('Folder actions', () => {
     expect(mailbox(server, 'work')?.isSubscribed).toBe(false)
     expect(mailbox(server, 'clients')?.isSubscribed).toBe(false)
 
-    const toggle = screen.getByRole('button', { name: 'Show hidden folders' })
-    await userEvent.click(toggle)
-    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByTestId('mailbox-search-button'))
+    await userEvent.type(screen.getByTestId('mailbox-search-input'), 'Work')
     expect(
       within(folder('Work')).getByTestId('mailbox-item-hidden')
     ).toHaveTextContent('hidden')

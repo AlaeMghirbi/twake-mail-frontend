@@ -40,7 +40,10 @@ import {
   type ReactNode
 } from 'react'
 
-import { ActionIconButton } from '@/ds/ActionIconButton/ActionIconButton'
+import {
+  ActionIcon,
+  ActionIconButton
+} from '@/ds/ActionIconButton/ActionIconButton'
 import { FieldLine } from '@/ds/FieldLine/FieldLine'
 import {
   FileDropZone,
@@ -48,6 +51,7 @@ import {
 } from '@/ds/FileDropZone/FileDropZone'
 import { ThinProgressBar } from '@/ds/ThinProgressBar/ThinProgressBar'
 import { IMAGE_TYPES, RichTextEditor } from '@/ds/RichTextEditor/RichTextEditor'
+import { EditorIcon } from '@/ds/RichTextEditor/editorIcons'
 import type { InlineImageAttributes } from '@/ds/RichTextEditor/inlineImage'
 import type { RichTextEditorActions } from '@/ds/RichTextEditor/types'
 import { PillButton } from '@/ds/PillButton/PillButton'
@@ -135,6 +139,7 @@ import { TemplatePicker } from './TemplatePicker'
 import { chooseTemplatesTarget, templatesTargetKey } from './templatesFolder'
 import { EDITOR_TEST_IDS } from './editorTestIds'
 import { showBlockedImages } from './editorImages'
+import { blockDisplay } from './draftHtml'
 import { InlineImageStore, resizeImage } from './InlineImageStore'
 import { isLargeMessage } from './largeMessage'
 import type { MailtoFields } from './mailto'
@@ -156,7 +161,7 @@ import { removeSignatures, replaceSignature, signatureHtml } from './signature'
 import { DRAFT_IDLE_MS } from './draftPolicy'
 import { SEND_SLOW_MS } from './sendPolicy'
 import { getEditorHtml, getEditorStorageHtml } from './editorHtml'
-import { EmojiButton } from './EmojiButton'
+import { ComposerEmojiPicker } from './ComposerEmojiPicker'
 import { DriveAttachButton } from './DriveAttachButton'
 import { ScribeMenu, type ScribeInput } from './ScribeMenu'
 import {
@@ -412,7 +417,10 @@ function LoadedComposerForm({
   const [options, setOptions] = useState<SendOptions>(content.options)
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null)
   const moreButtonRef = useRef<HTMLButtonElement>(null)
+  const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null)
+  const [focusField, setFocusField] = useState<RecipientKind | null>(null)
   const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const isMoreFocusDueRef = useRef(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   /**
    * What the live region says of an autosave. A save asked for says it in
@@ -779,7 +787,8 @@ function LoadedComposerForm({
       title: t('composer.close.title'),
       message: t('composer.close.message'),
       confirmLabel: t('composer.close.save'),
-      alternativeLabel: t('composer.close.discard')
+      alternativeLabel: t('composer.close.discard'),
+      hasCancelButton: false
     })
     if (choice === 'cancel') return false
     if (choice === 'alternative') return true
@@ -964,6 +973,7 @@ function LoadedComposerForm({
   }
 
   const handleOpenMore = (event: MouseEvent<HTMLElement>): void => {
+    setFocusField(null)
     setMoreAnchor(event.currentTarget)
   }
 
@@ -1092,13 +1102,21 @@ function LoadedComposerForm({
 
   const handleOpenTemplatePicker = (): void => {
     setMoreAnchor(null)
+    isMoreFocusDueRef.current = false
     setIsPickerOpen(true)
   }
 
   const handleClosePicker = (): void => {
     setIsPickerOpen(false)
-    moreButtonRef.current?.focus()
+    isMoreFocusDueRef.current = true
   }
+  // After the render that closes the picker: until then the focus trap of
+  // a phone's sheet pulls the focus back into it
+  useEffect(() => {
+    if (isPickerOpen || !isMoreFocusDueRef.current) return
+    isMoreFocusDueRef.current = false
+    moreButtonRef.current?.focus()
+  }, [isPickerOpen])
 
   /**
    * "Insert template": its subject and body (its files and recipients stay
@@ -1488,6 +1506,7 @@ function LoadedComposerForm({
       }}
       data-testid="composer-formatting-button"
     >
+      {/* Not an ActionIcon: the viewBox of FormatSize already holds its margin */}
       <Icon icon={FormatSize} size={isPhone ? 28 : 24} aria-hidden="true" />
     </ActionIconButton>
   )
@@ -1513,7 +1532,7 @@ function LoadedComposerForm({
       className={gap}
       data-testid="composer-attach-file-button"
     >
-      <Icon icon={Attachment} size={24} aria-hidden="true" />
+      <ActionIcon icon={Attachment} />
     </ActionIconButton>
   )
   const imageButton = (
@@ -1523,7 +1542,7 @@ function LoadedComposerForm({
       className={gap}
       data-testid={EDITOR_TEST_IDS.toolbarButton?.('image')}
     >
-      <Icon icon={Image} size={24} aria-hidden="true" />
+      <ActionIcon icon={Image} />
     </ActionIconButton>
   )
   // On a phone the link is in the More menu, as the bar has no room for it
@@ -1534,7 +1553,21 @@ function LoadedComposerForm({
       className={gap}
       data-testid={EDITOR_TEST_IDS.toolbarButton?.('link')}
     >
-      <Icon icon={Link} size={24} aria-hidden="true" />
+      <ActionIcon icon={Link} />
+    </ActionIconButton>
+  )
+  const emojiButton = (
+    <ActionIconButton
+      label={t('composer.emoji.open')}
+      aria-haspopup="dialog"
+      aria-expanded={emojiAnchor !== null}
+      onClick={event => {
+        setEmojiAnchor(event.currentTarget)
+      }}
+      className={gap}
+      data-testid="composer-emoji-button"
+    >
+      <EditorIcon name="emoji" fontSize="medium" />
     </ActionIconButton>
   )
   const driveButton = (
@@ -1596,7 +1629,7 @@ function LoadedComposerForm({
       className={gap}
       data-testid="composer-more-button"
     >
-      <Icon icon={Dots} size={24} aria-hidden="true" />
+      <ActionIcon icon={Dots} />
     </ActionIconButton>
   )
   // As tmail-flutter: "Save as draft" beside "Delete", the menu holds it
@@ -1608,7 +1641,7 @@ function LoadedComposerForm({
       className="u-ml-half"
       data-testid="composer-save-draft-button"
     >
-      <Icon icon={FileOutline} size={24} aria-hidden="true" />
+      <ActionIcon icon={FileOutline} />
     </ActionIconButton>
   )
   // As tmail-flutter on phones: the arrow up in a primary disc, grey while
@@ -1682,6 +1715,7 @@ function LoadedComposerForm({
     <Menu
       anchorEl={moreAnchor}
       open={moreAnchor !== null}
+      disableRestoreFocus={focusField !== null}
       onClose={() => {
         setMoreAnchor(null)
       }}
@@ -1705,6 +1739,30 @@ function LoadedComposerForm({
           <ListItemText inset primary={t('composer.saveAsDraft')} />
         </MenuItem>
       ) : null}
+      {isPhone ? null : (
+        <MenuItem
+          onClick={() => {
+            setMoreAnchor(null)
+            setEmojiAnchor(moreButtonRef.current)
+          }}
+          data-testid="composer-emoji-item"
+        >
+          <ListItemText inset primary={t('composer.emoji.open')} />
+        </MenuItem>
+      )}
+      {isPhone || shown.has('replyTo') ? null : (
+        <MenuItem
+          onClick={() => {
+            setMoreAnchor(null)
+            setShown(current => new Set([...current, 'replyTo']))
+            setIsCollapsed(false)
+            setFocusField('replyTo')
+          }}
+          data-testid="composer-show-reply-to-item"
+        >
+          <ListItemText inset primary={t('composer.fields.replyTo')} />
+        </MenuItem>
+      )}
       <MenuItem
         onClick={handleOpenTemplatePicker}
         data-testid="composer-insert-template-item"
@@ -1815,6 +1873,7 @@ function LoadedComposerForm({
               setInputs(current => ({ ...current, [kind]: value }))
             }}
             shown={shown}
+            focusField={focusField}
             onShow={kind => {
               setShown(current => new Set([...current, kind]))
             }}
@@ -1863,6 +1922,7 @@ function LoadedComposerForm({
             isCollapsed={isCollapsed}
             refused={refusedRecipients}
             onExpand={() => {
+              setFocusField(null)
               setIsCollapsed(false)
             }}
             autoFocusTo={autoFocus && !opensOnText}
@@ -1931,8 +1991,15 @@ function LoadedComposerForm({
               fontFamilies={fontFamilies}
               onImageFiles={handleImageFiles}
               htmlBlock={{
-                toggleLabel: kind =>
-                  kind === 'signature' ? t('composer.signature') : null,
+                displayOf: blockDisplay,
+                toggleLabel: (kind, isFolded) =>
+                  kind === 'signature'
+                    ? t(
+                        isFolded
+                          ? 'composer.showSignature'
+                          : 'composer.hideSignature'
+                      )
+                    : null,
                 toggleTestId: kind =>
                   kind === 'signature' ? 'composer-signature-toggle' : undefined
               }}
@@ -1992,17 +2059,12 @@ function LoadedComposerForm({
           )}
         </Box>
         {isPhone ? null : (
-          <Box className="u-flex u-flex-items-center u-flex-shrink-0 u-flex-wrap u-pv-1 u-ph-2">
+          <Box className="u-flex u-flex-items-center u-flex-shrink-0 u-flex-wrap u-p-1">
             {formattingButton}
             {attachButton}
             {imageButton}
             {linkButton}
-            <EmojiButton
-              onInsert={emoji => {
-                editorActions.current?.insertText(emoji)
-              }}
-              onDismiss={() => editorActions.current?.focus()}
-            />
+            {emojiButton}
             {driveButton}
             {scribeMenu}
             {moreButton}
@@ -2013,13 +2075,23 @@ function LoadedComposerForm({
               onClick={handleDeleteDraft}
               data-testid="composer-delete-draft-button"
             >
-              <Icon icon={Trash} size={24} aria-hidden="true" />
+              <ActionIcon icon={Trash} />
             </ActionIconButton>
             {saveDraftButton}
             <span className="u-ml-1">{sendButton}</span>
           </Box>
         )}
         {moreMenu}
+        <ComposerEmojiPicker
+          anchor={emojiAnchor}
+          onClose={() => {
+            setEmojiAnchor(null)
+          }}
+          onInsert={emoji => {
+            editorActions.current?.insertText(emoji)
+          }}
+          onDismiss={() => editorActions.current?.focus()}
+        />
         {sendingDialog}
         {savingTemplateDialog}
         <TemplatePicker

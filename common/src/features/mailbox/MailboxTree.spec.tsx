@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { mockViewport, resetViewport } from '@/ds/testing/mockViewport'
 import { DRAGGED_EMAILS_TYPE } from '@common/features/thread/useEmailListActions'
 import type { SupportedLanguage } from '@common/i18n/languages'
 import {
@@ -139,12 +140,51 @@ describe('MailboxTree', () => {
     )
   })
 
+  it.each([
+    ['a phone', 390],
+    ['a tablet', 820]
+  ])(
+    'leaves ⋮ and Clean out of the drawer of %s, where a long press opens the menu',
+    async (_, width) => {
+      mockViewport({ width, touch: true })
+      try {
+        renderTree('/mailbox/mailbox-inbox', 'en', [
+          makeMailbox({
+            id: 'mailbox-spam',
+            name: 'Spam',
+            role: 'junk',
+            totalEmails: 3
+          })
+        ])
+        await screen.findAllByTestId('mailbox-item')
+
+        expect(
+          within(folder('Spam')).queryByRole('button', {
+            name: 'Actions on Spam'
+          })
+        ).toBe(null)
+        expect(
+          within(folder('Spam')).queryByRole('button', { name: 'Clean' })
+        ).toBe(null)
+        expect(folder('Spam')).toHaveAttribute('aria-haspopup', 'menu')
+        expect(folder('Spam')).toHaveAccessibleDescription(
+          'Long press for actions'
+        )
+      } finally {
+        resetViewport()
+      }
+    }
+  )
+
   it('says a hidden folder is hidden without a coloured badge', async () => {
     renderTree('/mailbox/mailbox-inbox', 'en', [
       makeMailbox({ id: 'rare', name: 'Rarely used', isSubscribed: false })
     ])
     await screen.findAllByTestId('mailbox-item')
-    await userEvent.click(screen.getByTestId('show-hidden-folders-button'))
+    // Out of the tree: the folder search lists it
+    expect(screen.queryByText('Rarely used')).toBe(null)
+    await userEvent.click(screen.getByTestId('mailbox-search-button'))
+    await userEvent.type(screen.getByTestId('mailbox-search-input'), 'Rarely')
 
     const row = folder('Rarely used')
     expect(row).toHaveAttribute('data-hidden', 'true')
@@ -155,6 +195,30 @@ describe('MailboxTree', () => {
     expect(within(row).getByTestId('mailbox-item-name')).toHaveTextContent(
       'Rarely used'
     )
+  })
+
+  it('shows the hidden folders in the tree on demand, marked hidden', async () => {
+    renderTree('/mailbox/mailbox-inbox', 'en', [
+      makeMailbox({ id: 'rare', name: 'Rarely used', isSubscribed: false })
+    ])
+    await screen.findAllByTestId('mailbox-item')
+    expect(screen.queryByText('Rarely used')).toBe(null)
+
+    const toggle = screen.getByRole('button', { name: 'Show hidden folders' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(folder('Rarely used')).toHaveAttribute('data-hidden', 'true')
+    await userEvent.click(toggle)
+    expect(screen.queryByText('Rarely used')).toBe(null)
+  })
+
+  it('has no hidden folders toggle when no folder is hidden', async () => {
+    renderTree('/mailbox/mailbox-inbox')
+    await screen.findAllByTestId('mailbox-item')
+
+    expect(screen.queryByTestId('show-hidden-folders-button')).toBe(null)
   })
 
   it('lists the system folders first, with their translated name', async () => {
@@ -480,6 +544,55 @@ describe('MailboxTree', () => {
     expect(
       within(section).getByTestId('mailbox-item-address')
     ).toHaveTextContent('team@example.com')
+  })
+
+  it('lists the folders other users share under "Other users", below the team mailboxes', async () => {
+    const shared = 'Delegated[bob@example.com]'
+    renderWithProviders(<MailboxTree />, {
+      route: '/mailbox/mailbox-inbox',
+      path: '/mailbox/:mailboxId',
+      withJmapSession: true,
+      jmapServer: makeFakeJmapServer({
+        mailboxes: [
+          ...makeDefaultMailboxes(),
+          ...makeTeamMailboxes(),
+          // The user is not subscribed to a folder shared with them
+          makeMailbox({
+            id: 'abc',
+            name: 'abc',
+            namespace: shared,
+            isSubscribed: false
+          })
+        ]
+      })
+    })
+
+    const section = await screen.findByTestId('other-users-section')
+    expect(
+      within(section).getByRole('button', { name: 'Other users' })
+    ).toBeVisible()
+    const item = within(section).getByRole('treeitem')
+    expect(within(item).getByTestId('mailbox-item-name')).toHaveTextContent(
+      'abc'
+    )
+    expect(within(item).getByTestId('mailbox-item-address')).toHaveTextContent(
+      'bob@example.com'
+    )
+    // A folder holding emails, not a container
+    expect(within(item).getByRole('link')).toHaveAttribute(
+      'href',
+      '/mailbox/abc'
+    )
+    expect(within(item).queryByTestId('mailbox-item-hidden')).toBe(null)
+    // Neither among the team mailboxes
+    expect(
+      within(screen.getByTestId('team-mailboxes-section')).queryByText('abc')
+    ).toBe(null)
+    expect(
+      screen
+        .getByTestId('team-mailboxes-section')
+        .compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   describe('the root of a team mailbox, a container', () => {

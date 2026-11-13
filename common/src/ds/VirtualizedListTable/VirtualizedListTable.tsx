@@ -69,12 +69,7 @@ export interface RowLayout {
   paddingTop: number
   paddingBottom: number
   gap: number
-  /** The divider under the row starts after its first cell */
-  insetDivider?: boolean
-  /**
-   * The divider under the row keeps this margin on both sides instead
-   * (tmail-flutter's compact rows), in px
-   */
+  /** The divider under the row keeps this margin on both sides, in px */
   dividerMarginX?: number
   /** With `dividerMarginX`: the room of the divider stays, blank */
   hideDivider?: boolean
@@ -134,7 +129,6 @@ export function makeRowLayoutSx({
   paddingTop,
   paddingBottom,
   gap,
-  insetDivider = false,
   dividerMarginX,
   hideDivider = false
 }: RowLayout): Record<string, Record<string, string> | string> {
@@ -160,8 +154,7 @@ export function makeRowLayoutSx({
       borderBottomColor: ROW_DIVIDER_COLOR
     },
     '& .MuiTableCell-root:first-of-type': {
-      paddingLeft: `${paddingX}px`,
-      ...(insetDivider ? { borderBottomColor: 'transparent' } : {})
+      paddingLeft: `${paddingX}px`
     },
     '&.Mui-selected, &.Mui-selected:hover': { backgroundColor: 'transparent' },
     '&.Mui-selected .MuiTableCell-root, &.Mui-selected:hover .MuiTableCell-root':
@@ -176,10 +169,25 @@ export function makeRowLayoutSx({
 }
 
 /**
+ * The first row whose top is in view in `table`, else the first one
+ * rendered. Virtuoso renders rows above the viewport too: focusing one of
+ * them would scroll the list up (after a selection is deleted, say).
+ */
+function firstRowInView(table: Element): Element | null {
+  const rows = [...table.querySelectorAll(`tr [${ROW_FOCUS_ATTRIBUTE}]`)]
+    .map(control => control.closest('tr'))
+    .filter(row => row !== null)
+  const top = table.getBoundingClientRect().top
+  return (
+    rows.find(row => row.getBoundingClientRect().top >= top) ?? rows[0] ?? null
+  )
+}
+
+/**
  * Moves the focus to the `ROW_FOCUS_ATTRIBUTE` control of the row after
  * (`1`) or before (`-1`) the row holding `from`; from outside the rows, to
- * the first row. Virtuoso renders rows beyond the viewport, and focusing
- * one scrolls it into view. Returns whether the focus moved.
+ * the first row in view. Virtuoso renders rows beyond the viewport, and
+ * focusing one scrolls it into view. Returns whether the focus moved.
  */
 export function moveRowFocus(
   table: Element,
@@ -189,7 +197,7 @@ export function moveRowFocus(
   const row = from?.closest('tr') ?? null
   const sibling =
     row === null || !table.contains(row)
-      ? table.querySelector(`tr [${ROW_FOCUS_ATTRIBUTE}]`)?.closest('tr')
+      ? firstRowInView(table)
       : direction === 1
         ? row.nextElementSibling
         : row.previousElementSibling

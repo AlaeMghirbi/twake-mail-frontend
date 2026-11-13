@@ -1,15 +1,13 @@
-import { Plus } from '@linagora/twake-icons'
+import { Filter, Icon, Plus } from '@linagora/twake-icons'
 import { Alert, Button } from '@linagora/twake-mui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Rule } from 'jmap-client-ts/linagora'
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
-import { NoRules } from '@/ds/FlutterIcons/FlutterIcons'
-import { SettingsPrimaryButton } from '@/ds/SettingsButtons/SettingsButtons'
 import { SettingsCardList } from '@/ds/SettingsCards/SettingsCards'
 import { SettingsEmptyState } from '@/ds/SettingsEmptyState/SettingsEmptyState'
-import { SettingsCount } from '@/ds/SettingsFields/SettingsFields'
+import { SettingsLabelPill } from '@/ds/SettingsFields/SettingsFields'
 import { useConfirm } from '@common/features/confirm/ConfirmProvider'
 import { LoadingListSkeleton } from '@common/features/loading/LoadingListSkeleton'
 import { useNotify } from '@common/features/notifications/NotificationsProvider'
@@ -120,6 +118,15 @@ export function EmailRulesSettings({
   const query = useQuery(rulesQueryOptions(client, accountId))
   const rules = query.data ?? []
   const [form, setForm] = useState<FormState>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+  // The first rule created, the button of the empty state that opened the
+  // dialog is gone: the focus goes to "Add a rule" instead of the page
+  const [isFocusingAdd, setIsFocusingAdd] = useState(false)
+  useEffect(() => {
+    if (!isFocusingAdd || addButtonRef.current === null) return
+    addButtonRef.current.focus()
+    setIsFocusingAdd(false)
+  }, [isFocusingAdd, rules.length])
   const newRuleFrom = readNewRuleFrom(location.state)
   const [openedFor, setOpenedFor] = useState<string | null>(null)
   if (newRuleFrom !== null && openedFor !== location.key) {
@@ -143,8 +150,12 @@ export function EmailRulesSettings({
   const handleSubmit = async (rule: Rule): Promise<boolean> => {
     if (form === null) return false
     if (form.index === null) {
+      const wasEmpty = rules.length === 0
       const isAdded = await addRule(rule)
-      if (isAdded) setForm(null)
+      if (isAdded) {
+        setForm(null)
+        if (wasEmpty) setIsFocusingAdd(true)
+      }
       return isAdded
     }
     const next = rules.map((other, index) =>
@@ -230,13 +241,18 @@ export function EmailRulesSettings({
     <SettingsSectionLayout
       section={section}
       actions={
-        // As tmail-flutter: there with or without rules
-        <SettingsPrimaryButton
-          label={t('rules.add')}
-          icon={Plus}
-          onClick={openCreator}
-          data-testid="add-rule-button"
-        />
+        // Without rules, the empty state has the only button creating one
+        query.isSuccess && rules.length === 0 ? undefined : (
+          <Button
+            ref={addButtonRef}
+            className="u-flex-shrink-0"
+            startIcon={<Icon icon={Plus} size={12} aria-hidden="true" />}
+            onClick={openCreator}
+            data-testid="add-rule-button"
+          >
+            {t('rules.add')}
+          </Button>
+        )
       }
     >
       {query.isPending ? (
@@ -258,24 +274,25 @@ export function EmailRulesSettings({
           {t('rules.errors.load')}
         </Alert>
       ) : rules.length === 0 ? (
-        <>
-          <SettingsCount label={t('rules.nameOfRules')} count={0} />
-          <SettingsEmptyState
-            icon={NoRules}
-            title={t('rules.empty.title')}
-            text={t('rules.empty.message')}
-            action={{
-              label: t('rules.empty.action'),
-              icon: Plus,
-              onClick: openCreator,
-              'data-testid': 'create-first-rule-button'
-            }}
-            data-testid="email-rules-empty"
-          />
-        </>
+        <SettingsEmptyState
+          icon={Filter}
+          look="tile"
+          title={t('rules.empty.title')}
+          text={t('rules.empty.message')}
+          action={{
+            label: t('rules.empty.action'),
+            icon: Plus,
+            onClick: openCreator,
+            'data-testid': 'create-first-rule-button'
+          }}
+          data-testid="email-rules-empty"
+        />
       ) : (
         <>
-          <SettingsCount label={t('rules.nameOfRules')} count={rules.length} />
+          <SettingsLabelPill
+            label={t('rules.nameOfRules')}
+            pill={t('rules.count', { smart_count: rules.length })}
+          />
           <SettingsCardList
             label={t('rules.listLabel')}
             data-testid="email-rule-list"

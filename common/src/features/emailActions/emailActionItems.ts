@@ -5,7 +5,6 @@ import {
   Email,
   EmailNotification,
   EmailOpen,
-  Pen,
   Printer,
   Spam,
   Star,
@@ -29,6 +28,7 @@ import {
   isPersonalMailbox
 } from '@common/features/mailbox/mailboxTree'
 import { NotSpam } from '@/ds/FlutterIcons/FlutterIcons'
+import { EditOutlineIcon } from '@/ds/ListIcons/ListIcons'
 import type { MailboxSummary } from '@common/features/mailbox/queries'
 import type { TranslationKey } from '@common/i18n/useI18n'
 
@@ -158,7 +158,7 @@ const ITEMS: Record<EmailActionId, Omit<EmailActionItem, 'id'>> = {
   },
   'edit-as-new': {
     label: 'emailActions.menu.editAsNew',
-    icon: Pen,
+    icon: EditOutlineIcon,
     isDestructive: false,
     group: 3
   }
@@ -212,8 +212,9 @@ export function availableEmailActions(
   if (emails.length === 0) return []
   const role = mailbox?.role ?? null
   const isSpam = role === 'junk'
-  // Team mailboxes have neither Archive nor Spam (tmail-flutter)
-  // (out of a folder, in a search, the emails say where they are)
+  // Team mailboxes have neither Archive nor Spam (tmail-flutter), nor the
+  // folders other users share (out of a folder, in a search, the emails say
+  // where they are)
   const isTeam =
     mailbox === null
       ? emails.some(email => findTeamHomeId(mailboxes, email) !== null)

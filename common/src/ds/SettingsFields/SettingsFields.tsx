@@ -2,15 +2,26 @@
 // `TextField`, 48 px high (40 in a form row); a label with a pill after it
 // ("Forward to [2 recipients]"); a form row with its label on the left, in a
 // column of fixed width.
-import { Box, MenuItem, TextField, Typography } from '@linagora/twake-mui'
+import { CalendarToday, ClockOutline, Icon } from '@linagora/twake-icons'
+import {
+  Box,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  TextField,
+  Tooltip,
+  Typography
+} from '@linagora/twake-mui'
 import {
   useId,
+  useRef,
   type ChangeEvent,
   type ReactElement,
   type ReactNode,
   type Ref
 } from 'react'
 
+import { TOUCH_MEDIA } from '@/ds/TouchTargets/TouchTargets'
 import { SCREEN_QUERIES, useScreenSize } from '@/ds/useScreenSize/useScreenSize'
 
 function fieldSx(
@@ -24,6 +35,47 @@ function fieldSx(
     '& .MuiOutlinedInput-input': { px: '12px' },
     '& .MuiFormHelperText-root': { mx: 0 }
   }
+}
+
+// TODO: drop once twake-mui has a date and time field
+// (https://github.com/Crash--/twake-ui/issues/22): the browser draws the
+// picker button of a date or time input in black, its own glyph, so it is
+// hidden and a twake-icons button opens the picker instead
+const PICKER_FIELD_SX: Record<string, unknown> = {
+  '& input::-webkit-calendar-picker-indicator': { display: 'none' },
+  // The 44 px touch target overflows the 32 px button, so that the field
+  // keeps its height and its spacing is twake-mui's, as with a mouse
+  [TOUCH_MEDIA]: {
+    '& .MuiInputAdornment-root .MuiIconButton-root': { m: '-6px' }
+  }
+}
+
+/**
+ * The browser draws no picker button, or lets it be hidden: Chromium hides
+ * it, WebKit draws none. Gecko (Firefox, told by a pseudo-element of its
+ * own) draws one that no CSS hides, and keeps it
+ */
+function canHideNativePicker(): boolean {
+  return !(
+    typeof CSS !== 'undefined' &&
+    typeof CSS.supports === 'function' &&
+    CSS.supports('selector(::-moz-range-thumb)')
+  )
+}
+
+function openPicker(input: HTMLInputElement | null): void {
+  if (input === null) return
+  input.focus()
+  try {
+    input.showPicker()
+  } catch {
+    // Older Safari and Firefox: the focused field takes the typing
+  }
+}
+
+function setRef<T>(ref: Ref<T> | undefined, node: T | null): void {
+  if (typeof ref === 'function') ref(node)
+  else if (ref) ref.current = node
 }
 
 export interface SettingsTextFieldProps {
@@ -45,6 +97,12 @@ export interface SettingsTextFieldProps {
   size?: 'large' | 'form'
   width?: number | string
   type?: string
+  /**
+   * With `type` `date` or `time`: the name of the button opening the
+   * picker of the browser, e.g. "Select the start date". Where the browser
+   * button cannot be hidden (Firefox), it stays and none is added
+   */
+  pickerLabel?: string
   inputMode?: 'email' | 'text'
   inputTestId?: string
   /** Of the input, for the `htmlFor` of a `SettingsFormRow` */
@@ -68,15 +126,50 @@ export function SettingsTextField({
   size = 'large',
   width = 404,
   type,
+  pickerLabel,
   inputMode,
   inputTestId,
   id,
   className,
   'data-testid': testId
 }: SettingsTextFieldProps): ReactElement {
+  const ownInputRef = useRef<HTMLInputElement | null>(null)
+  const hasPicker =
+    (type === 'date' || type === 'time') &&
+    pickerLabel !== undefined &&
+    canHideNativePicker()
+  const handleInputRef = (node: HTMLInputElement | null): void => {
+    ownInputRef.current = node
+    setRef(inputRef, node)
+  }
+  const picker = hasPicker ? (
+    <InputAdornment position="end">
+      <Tooltip title={pickerLabel}>
+        <span>
+          <IconButton
+            size="small"
+            aria-label={pickerLabel}
+            disabled={disabled}
+            onClick={() => {
+              openPicker(ownInputRef.current)
+            }}
+            data-testid={
+              inputTestId === undefined ? undefined : `${inputTestId}-picker`
+            }
+          >
+            <Icon
+              icon={type === 'date' ? CalendarToday : ClockOutline}
+              size={16}
+              aria-hidden="true"
+            />
+          </IconButton>
+        </span>
+      </Tooltip>
+    </InputAdornment>
+  ) : null
   return (
     <TextField
-      inputRef={inputRef}
+      inputRef={handleInputRef}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
@@ -87,8 +180,12 @@ export function SettingsTextField({
       type={type}
       id={id}
       className={className}
-      sx={fieldSx(size === 'form' ? 40 : 48, width)}
+      sx={{
+        ...fieldSx(size === 'form' ? 40 : 48, width),
+        ...(hasPicker ? PICKER_FIELD_SX : {})
+      }}
       slotProps={{
+        ...(picker === null ? {} : { input: { endAdornment: picker } }),
         htmlInput: {
           'aria-label': label,
           ...(describedBy === undefined
@@ -266,19 +363,19 @@ export function SettingsMenuSelect({
 const LABEL_SX = { typography: 'subtitle2', color: 'text.primary' } as const
 
 const PILL_SX = {
-  ml: 2,
+  ml: '12px',
   px: '12px',
-  py: '4px',
+  py: '6px',
   borderRadius: '16px',
   bgcolor: 'action.hover',
-  typography: 'body1',
+  typography: 'caption',
   color: 'text.primary'
 } as const
 
 export interface SettingsLabelPillProps {
   label: string
-  /** In the grey pill after the label */
-  pill: string
+  /** In the grey pill after the label, none when null */
+  pill: string | null
   /** The label is a heading of the section */
   component?: 'h2' | 'p'
   id?: string
@@ -292,40 +389,25 @@ export function SettingsLabelPill({
   id
 }: SettingsLabelPillProps): ReactElement {
   return (
-    <Box className="u-flex u-flex-items-center" sx={{ pt: '20px', pb: '36px' }}>
+    <Box
+      className="u-flex u-flex-items-center"
+      sx={{ minHeight: 32, pt: 3, pb: 1 }}
+    >
       <Typography id={id} component={component} sx={{ ...LABEL_SX, m: 0 }}>
         {label}
       </Typography>
-      <Box component="span" sx={PILL_SX}>
-        {pill}
-      </Box>
+      {pill === null ? null : (
+        <Box component="span" sx={PILL_SX}>
+          {pill}
+        </Box>
+      )}
     </Box>
   )
 }
 
-export interface SettingsCountProps {
-  label: string
-  count: number
-}
+export const SETTINGS_FORM_WIDTH = 660
 
-/** A label of the settings and a number after it ("Name of Rules 2") */
-export function SettingsCount({
-  label,
-  count
-}: SettingsCountProps): ReactElement {
-  return (
-    // As tmail-flutter (`CountNameOfRulesWidget`): the list follows right
-    // after it
-    <Typography component="p" sx={{ ...LABEL_SX, mt: 2, mb: 0 }}>
-      {label}{' '}
-      <Box component="span" sx={{ fontWeight: 400 }}>
-        {count}
-      </Box>
-    </Typography>
-  )
-}
-
-const COLUMN_SX = { maxWidth: 660 } as const
+const COLUMN_SX = { maxWidth: SETTINGS_FORM_WIDTH } as const
 
 const ROW_SX = {
   display: 'flex',
@@ -372,6 +454,8 @@ export function SettingsFormColumn({
 export interface SettingsFormRowLabelProps {
   /** Id of the field it labels */
   htmlFor?: string
+  /** Its own id, for a group it names (`aria-labelledby`) */
+  id?: string
   /** Faded with its field */
   isDisabled?: boolean
   children: ReactNode
@@ -380,12 +464,14 @@ export interface SettingsFormRowLabelProps {
 /** The label of a field of a settings form row */
 export function SettingsFormRowLabel({
   htmlFor,
+  id,
   isDisabled = false,
   children
 }: SettingsFormRowLabelProps): ReactElement {
   return (
     <Box
-      component="label"
+      component={htmlFor === undefined ? 'span' : 'label'}
+      id={id}
       htmlFor={htmlFor}
       sx={
         isDisabled ? { ...ROW_LABEL_SX, color: 'text.disabled' } : ROW_LABEL_SX
@@ -474,24 +560,43 @@ export interface SettingsFormRowProps {
   label: string
   /** Id of the field it labels */
   htmlFor?: string
-  /** The label at the top, beside a tall field */
-  alignTop?: boolean
+  /** Id of the label, for a group it names instead of a field */
+  labelId?: string
+  /** The label above its field, as wide as the column */
+  isStacked?: boolean
   /** Its fields are disabled: the label fades */
   isDisabled?: boolean
   children: ReactNode
 }
 
-/** A row of a settings form: its label on the left, its fields after it */
+/** A row of a settings form: its label on the left or above, then its fields */
 export function SettingsFormRow({
   label,
   htmlFor,
-  alignTop = false,
+  labelId,
+  isStacked = false,
   isDisabled = false,
   children
 }: SettingsFormRowProps): ReactElement {
   return (
-    <Box sx={alignTop ? { ...ROW_SX, alignItems: 'flex-start' } : ROW_SX}>
-      <SettingsFormRowLabel htmlFor={htmlFor} isDisabled={isDisabled}>
+    <Box
+      sx={
+        isStacked
+          ? {
+              ...ROW_SX,
+              flexDirection: 'column',
+              alignItems: 'stretch',
+              gap: 1,
+              '& > div': { flex: 'none' }
+            }
+          : ROW_SX
+      }
+    >
+      <SettingsFormRowLabel
+        htmlFor={htmlFor}
+        id={labelId}
+        isDisabled={isDisabled}
+      >
         {label}
       </SettingsFormRowLabel>
       {children}

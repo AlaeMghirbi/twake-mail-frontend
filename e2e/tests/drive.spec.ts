@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { ComposerPage, MailboxPage } from '../pages'
+import { ComposerPage, LoginPage, MailboxPage } from '../pages'
 import { expectNoA11yViolations } from '../support/a11y'
 import { env } from '../support/env'
 import { expect, test } from '../support/fixtures'
@@ -32,19 +32,6 @@ async function appRunsInOidcMode(): Promise<boolean> {
   }
 }
 
-async function signInWithDex(page: Page): Promise<MailboxPage> {
-  await page.goto('/')
-  await page.waitForURL(url => url.pathname.startsWith('/dex/'))
-  await page.getByRole('textbox', { name: /email/i }).fill('alice@example.com')
-  await page.getByRole('textbox', { name: /password/i }).fill('secret')
-  await page.getByRole('button', { name: /login/i }).click()
-  const grant = page.getByRole('button', { name: /grant access/i })
-  if (await grant.isVisible().catch(() => false)) await grant.click()
-  const mailbox = new MailboxPage(page)
-  await mailbox.expectLoaded()
-  return mailbox
-}
-
 async function openDrivePicker(
   page: Page,
   mailbox: MailboxPage
@@ -53,7 +40,7 @@ async function openDrivePicker(
   await composer.root.getByTestId('composer-drive-button').click()
   const dialog = page.getByRole('dialog', { name: 'Twake Drive' })
   await expect(dialog).toBeVisible()
-  const picker = page.frameLocator('[data-testid="drive-picker-frame"]')
+  const picker = page.frameLocator('[data-testid="drive-picker-frame"] iframe')
   await expect(
     picker.getByRole('button', { name: 'Add as link' })
   ).toBeEnabled()
@@ -70,7 +57,7 @@ async function openDrivePicker(
 /** The options the app sent to the picker (Drive's FilePickerConfig) */
 async function pickerOptions(page: Page): Promise<Record<string, unknown>> {
   const text = await page
-    .frameLocator('[data-testid="drive-picker-frame"]')
+    .frameLocator('[data-testid="drive-picker-frame"] iframe')
     .locator('#options')
     .textContent()
   const parsed: unknown = JSON.parse(text ?? '{}')
@@ -102,7 +89,7 @@ test.describe('DRIVE Twake Drive picker', () => {
     'DRIVE-01 "Attach from Drive" opens the picker in a named dialog (full screen on phones); "Add as link" inserts a Drive card, the focus back in the message',
     { tag: '@mobile' },
     async ({ page }) => {
-      const mailbox = await signInWithDex(page)
+      const mailbox = await new LoginPage(page).loginWithDex()
       const composer = await openDrivePicker(page, mailbox)
       await expectNoA11yViolations(page)
       // Both actions, as tmail-flutter: the user chooses in Drive
@@ -112,7 +99,7 @@ test.describe('DRIVE Twake Drive picker', () => {
       expect(options).not.toHaveProperty('displayCloseButton')
 
       await page
-        .frameLocator('[data-testid="drive-picker-frame"]')
+        .frameLocator('[data-testid="drive-picker-frame"] iframe')
         .getByRole('button', { name: 'Add as link' })
         .click()
 
@@ -134,11 +121,11 @@ test.describe('DRIVE Twake Drive picker', () => {
   test('DRIVE-02 "Add as attachment" downloads the file and attaches it', async ({
     page
   }) => {
-    const mailbox = await signInWithDex(page)
+    const mailbox = await new LoginPage(page).loginWithDex()
     const composer = await openDrivePicker(page, mailbox)
 
     await page
-      .frameLocator('[data-testid="drive-picker-frame"]')
+      .frameLocator('[data-testid="drive-picker-frame"] iframe')
       .getByRole('button', { name: 'Add as attachment' })
       .click()
 
@@ -154,11 +141,11 @@ test.describe('DRIVE Twake Drive picker', () => {
   test('DRIVE-03 The close button of the picker closes it, the message unchanged', async ({
     page
   }) => {
-    const mailbox = await signInWithDex(page)
+    const mailbox = await new LoginPage(page).loginWithDex()
     const composer = await openDrivePicker(page, mailbox)
 
     await page
-      .frameLocator('[data-testid="drive-picker-frame"]')
+      .frameLocator('[data-testid="drive-picker-frame"] iframe')
       .getByRole('button', { name: 'Close Drive' })
       .click()
     await expect(page.getByRole('dialog', { name: 'Twake Drive' })).toBeHidden()
@@ -166,7 +153,7 @@ test.describe('DRIVE Twake Drive picker', () => {
     // With the keyboard: Drive does not handle Escape, but one Shift+Tab out
     // of its first control lands on the dialog, where Escape closes it
     await composer.root.getByTestId('composer-drive-button').click()
-    const picker = page.frameLocator('[data-testid="drive-picker-frame"]')
+    const picker = page.frameLocator('[data-testid="drive-picker-frame"] iframe')
     await expect(
       picker.getByRole('button', { name: 'Add as link' })
     ).toBeEnabled()
@@ -192,11 +179,11 @@ test.describe('DRIVE Twake Drive picker', () => {
     'DRIVE-04 The picker fills a centred dialog at the size it asks for, within the screen (full screen on phones); it can ask for the close button of the dialog',
     { tag: '@mobile' },
     async ({ page }) => {
-      const mailbox = await signInWithDex(page)
+      const mailbox = await new LoginPage(page).loginWithDex()
       await openDrivePicker(page, mailbox)
       const dialog = page.getByRole('dialog', { name: 'Twake Drive' })
-      const frame = page.getByTestId('drive-picker-frame')
-      const picker = page.frameLocator('[data-testid="drive-picker-frame"]')
+      const frame = page.getByTestId('drive-picker-frame').locator('iframe')
+      const picker = page.frameLocator('[data-testid="drive-picker-frame"] iframe')
       const viewport = page.viewportSize()
       if (viewport === null) throw new Error('No viewport')
       const isPhone = viewport.width < 600

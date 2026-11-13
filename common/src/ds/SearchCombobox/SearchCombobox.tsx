@@ -4,9 +4,10 @@
 // Contacts) needs suggestions under its field; this is the ARIA 1.2
 // combobox pattern around `SearchBar`, with a free header (filters) above
 // the list.
-import { Icon, Magnifier, CrossCircle } from '@linagora/twake-icons'
+import { Icon, Magnifier, Cross } from '@linagora/twake-icons'
 import {
   Box,
+  Divider,
   IconButton,
   Paper,
   Popper,
@@ -75,7 +76,6 @@ const LINE_SX = { display: 'flex', alignItems: 'center', minWidth: 0 } as const
 const LABEL_SX = (isStrong: boolean): SxProps<Theme> => ({
   flex: '0 1 auto',
   minWidth: 0,
-  color: 'text.primary',
   fontWeight: isStrong ? 600 : undefined
 })
 const HINT_SX = { flexShrink: 0, mr: 0.5, color: 'text.secondary' } as const
@@ -106,6 +106,8 @@ export interface SearchComboboxOption {
   label: ReactNode
   /** The label in Semi Bold (the sender of an email) */
   isStrong?: boolean
+  /** The label in the primary colour: an action such as "Search emails" */
+  isAction?: boolean
   /**
    * Before the label, in grey: the label is then a small hint too
    * ("Showing results for:" "text")
@@ -410,13 +412,13 @@ export function SearchCombobox({
                 {value === '' ? null : (
                   <Tooltip title={clearLabel}>
                     <IconButton
-                      size="small"
+                      size="medium"
                       aria-label={clearLabel}
                       onClick={handleClear}
                       sx={CLEAR_SX}
                       data-testid={testIds.clear}
                     >
-                      <Icon icon={CrossCircle} size={16} />
+                      <Icon icon={Cross} />
                     </IconButton>
                   </Tooltip>
                 )}
@@ -455,6 +457,7 @@ export function SearchCombobox({
           sx={{ borderRadius: PANEL_RADIUS, pt: `${fieldHeight}px` }}
           onMouseDown={keepFocus}
         >
+          <Divider />
           <Box sx={SCROLL_SX}>
             {header}
             {hasOptions ? (
@@ -487,7 +490,7 @@ export function SearchCombobox({
                             component="li"
                             role="presentation"
                             id={`${id}-${group.id}`}
-                            variant="body2"
+                            variant="caption"
                             className={
                               group.isLabelHidden === true
                                 ? 'u-visuallyhidden'
@@ -533,6 +536,11 @@ export function SearchCombobox({
                                     option.hint === undefined
                                       ? 'body1'
                                       : 'caption'
+                                  }
+                                  color={
+                                    option.isAction === true
+                                      ? 'primary'
+                                      : 'textPrimary'
                                   }
                                   sx={LABEL_SX(option.isStrong === true)}
                                 >

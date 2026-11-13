@@ -7,6 +7,17 @@ describe('initialsOf', () => {
     expect(initialsOf('Zoe 1')).toBe('ZZ')
     expect(initialsOf('x')).toBe('X')
   })
+
+  it('takes letters of any script', () => {
+    expect(initialsOf('Иван Петров')).toBe('ИП')
+    expect(initialsOf('Élise Dupont')).toBe('ÉD')
+  })
+
+  it('splits the words on any white space', () => {
+    expect(initialsOf('Alice  Martin')).toBe('AM')
+    expect(initialsOf('Alice Martin')).toBe('AM')
+    expect(initialsOf(' Alice Martin ')).toBe('AM')
+  })
 })
 
 describe('splitMatches', () => {

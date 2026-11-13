@@ -12,7 +12,7 @@ export interface RecipientAvatarProps {
 }
 
 /**
- * A decorative 20 px twake-mui `Avatar` in the colour of the address, the
+ * A decorative 24 px twake-mui `Avatar` in the colour of the address, the
  * first letter of the name drawn by CSS (`::before`), so it is neither read
  * nor part of the text of the chip.
  */
@@ -23,11 +23,18 @@ export function RecipientAvatar({
   const letter = Array.from(of.trim())[0]?.toUpperCase() ?? ''
   return (
     <Avatar
-      size={20}
+      size={24}
       color={nameToColor(colorKey)}
       aria-hidden="true"
       data-letter={letter}
-      sx={{ flexShrink: 0, '&::before': { content: 'attr(data-letter)' } }}
+      sx={{
+        flexShrink: 0,
+        // Library Twake chip "avatar left": 4 px from the edge and the name.
+        // Not through `MuiChip-avatar`, whose grey 12 px letter would win.
+        ml: '4px',
+        mr: '-8px',
+        '&::before': { content: 'attr(data-letter)' }
+      }}
     >
       {/* Without a child, MUI draws its fallback person icon */}
       <Box component="span" />

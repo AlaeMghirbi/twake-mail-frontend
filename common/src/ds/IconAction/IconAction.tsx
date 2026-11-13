@@ -7,11 +7,13 @@ import { Icon, type IconProps } from '@linagora/twake-icons'
 import { IconButton, Tooltip } from '@linagora/twake-mui'
 import type { MouseEvent, ReactElement } from 'react'
 
+import { TOUCH_MEDIA, TOUCH_TARGET_SIZE } from '@/ds/TouchTargets/TouchTargets'
+
 /**
  * The yellow of a filled (favorite) star, in every scheme: twake-mui has no
  * role for it, and `warning` stays for warnings
  */
-export const FAVORITE_COLOR = '#FFE082'
+export const FAVORITE_COLOR = '#FFCA28'
 
 const TONE_SX = {
   default: {},
@@ -20,18 +22,30 @@ const TONE_SX = {
   icon: { color: 'text.icon' },
   secondary: { color: 'text.secondary' },
   // What cannot be undone
-  danger: { color: 'error.main' },
-  // A primary icon on a rounded square of `background.default`, 8 px around
-  // the icon
-  filled: {
-    color: 'primary.main',
-    borderRadius: '10px',
-    bgcolor: 'background.default',
-    '&:hover': { bgcolor: 'action.hover' },
-    width: 'auto',
-    p: '8px'
-  }
+  danger: { color: 'error.main' }
 } as const
+
+/** The space before an inline button, its target never overflows past it */
+const INLINE_GAP = 4
+
+/**
+ * The touch target of an inline button: 44 px high, wider after the button
+ * than before it, so that a tap at the end of the text before still hits
+ * the text (an 18 px button gets a 35 × 44 target). The icon stays where a
+ * mouse sees it, close to the text, not centred in the wider target
+ */
+function inlineTouchTarget(
+  size: number,
+  iconSize: number
+): { minWidth: number; m: string; justifyContent: string; pl: string } {
+  const overflow = (TOUCH_TARGET_SIZE - size) / 2
+  return {
+    minWidth: size + INLINE_GAP + overflow,
+    m: `-${overflow}px -${overflow}px -${overflow}px -${INLINE_GAP}px`,
+    justifyContent: 'flex-start',
+    pl: `${INLINE_GAP + (size - iconSize) / 2}px`
+  }
+}
 
 export interface IconActionProps {
   /** Tooltip and accessible name */
@@ -40,20 +54,19 @@ export interface IconActionProps {
   /** Icon size in px, 20 by default */
   iconSize?: number
   /**
-   * Icon width in px when it is not square (a 26 x 24 drawing 16 px high
-   * is 17.33 px wide)
-   */
-  iconWidth?: number
-  /**
-   * `starred`: the yellow of a filled star; `muted`: a faint row icon;
-   * `filled`: a primary icon on a light grey rounded square; `icon`: the
-   * icon colour of the theme; `secondary`: the secondary text colour;
+   * `starred`: the yellow of a filled star; `muted`: a faint row icon; `icon`:
+   * the icon colour of the theme; `secondary`: the secondary text colour;
    * `danger`: the red of what cannot be undone
    */
-  tone?:
-    'default' | 'starred' | 'muted' | 'filled' | 'icon' | 'secondary' | 'danger'
+  tone?: 'default' | 'starred' | 'muted' | 'icon' | 'secondary' | 'danger'
   /** Width and height of the button in px, 32 by default */
   size?: number
+  /**
+   * After a text, on its line: on touch screens its target, 44 px high,
+   * overflows the button drawn above, below and after it, so that the line
+   * keeps its height, and by `INLINE_GAP` only before it, not over the text
+   */
+  isInline?: boolean
   onClick?: (event: MouseEvent<HTMLElement>) => void
   'aria-pressed'?: boolean
   'aria-haspopup'?: 'menu'
@@ -70,9 +83,9 @@ export function IconAction({
   label,
   icon,
   iconSize = 20,
-  iconWidth,
   tone = 'default',
   size = 32,
+  isInline = false,
   onClick,
   disabled,
   'aria-pressed': pressed,
@@ -80,7 +93,7 @@ export function IconAction({
   'aria-expanded': expanded,
   'data-testid': testId
 }: IconActionProps): ReactElement {
-  const content = <Icon icon={icon} size={iconSize} width={iconWidth} />
+  const content = <Icon icon={icon} size={iconSize} />
   const common = {
     size: 'small',
     'aria-label': label,
@@ -94,7 +107,10 @@ export function IconAction({
       width: size,
       height: size,
       p: 0,
-      ...TONE_SX[tone]
+      ...TONE_SX[tone],
+      ...(isInline && size < TOUCH_TARGET_SIZE
+        ? { [TOUCH_MEDIA]: inlineTouchTarget(size, iconSize) }
+        : {})
     }
   } as const
   // A disabled button takes no pointer event, so the tooltip needs a wrapper.

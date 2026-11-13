@@ -48,8 +48,6 @@ test.describe('A11Y composer', () => {
 
     // A named, non modal dialog; the title is a level 2 heading; the live regions are there
     // before anything is announced (a region added with its text is often missed)
-    // As tmail-flutter: the footer has "Aa" (the toolbar opens with it),
-    // the insertions and More, then delete, save as draft and send
     await expect(composer.root).toMatchAriaSnapshot(`
       - dialog "New message":
         - heading "New message" [level=2]
@@ -107,10 +105,10 @@ test.describe('A11Y composer', () => {
     await composer.expectMode('minimized')
     await expect(composer.root).toMatchAriaSnapshot(`
       - dialog "Quarterly numbers":
-        - button "Close"
-        - button "Fullscreen"
-        - button "Show"
         - 'button "Show: Quarterly numbers"'
+        - button "Show"
+        - button "Fullscreen"
+        - button "Close"
     `)
     await expect(
       composer.root.getByRole('button', { name: 'Show: Quarterly numbers' })
@@ -553,20 +551,21 @@ test.describe('A11Y composer', () => {
     await page.keyboard.press('Escape')
     await expect(composer.moreButton).toBeFocused()
 
-    // The close dialog: named, with its message, the focus comes back where it was on Cancel
+    // The close dialog: named, with its message, the focus comes back where it was on Escape
     await composer.editor.focus()
     await page.keyboard.type(' and more')
     await composer.closeButton.click()
     const dialog = page.getByTestId('confirm-dialog')
     await expect(dialog).toMatchAriaSnapshot(`
       - dialog "Save message":
+        - button "Close"
         - heading "Save message" [level=2]
-        - button "Cancel"
         - button "Discard changes"
         - button "Save"
     `)
+    await expect(dialog.getByTestId('confirm-dialog-cancel-button')).toHaveCount(0)
     await expectNoA11yViolations(page)
-    await dialog.getByTestId('confirm-dialog-cancel-button').click()
+    await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
     await expect(composer.closeButton).toBeFocused()
 

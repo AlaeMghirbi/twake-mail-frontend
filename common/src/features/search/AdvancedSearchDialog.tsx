@@ -1,11 +1,13 @@
-import { Calendar, Icon } from '@linagora/twake-icons'
+import { CalendarToday, Icon } from '@linagora/twake-icons'
 import {
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   MenuItem,
   TextField,
@@ -23,7 +25,6 @@ import {
 import { AnchoredDialog } from '@/ds/AnchoredDialog/AnchoredDialog'
 import { formatDayText } from '@/ds/DateRangePicker/calendarDays'
 import { FormRow } from '@/ds/FormRow/FormRow'
-import { LabeledCheckbox } from '@/ds/LabeledCheckbox/LabeledCheckbox'
 import { useScreenSize } from '@/ds/useScreenSize/useScreenSize'
 import type { RecipientFieldDnd } from '@/ds/RecipientField/RecipientField'
 import { DayRangeDialog } from '@common/features/dateRange/DayRangeDialog'
@@ -272,8 +273,8 @@ export function AdvancedSearchDialog({
   const isPhone = useScreenSize() === 'mobile'
   const clearButton = (
     <Button
-      variant="text"
-      size="large"
+      variant={isPhone ? 'text' : 'outlined'}
+      size={isPhone ? 'large' : 'small'}
       className="u-flex-shrink-0"
       onClick={handleClear}
       data-testid="advanced-search-clear-button"
@@ -285,7 +286,7 @@ export function AdvancedSearchDialog({
     <Button
       type="submit"
       variant="contained"
-      size="large"
+      size={isPhone ? 'large' : 'small'}
       data-testid="advanced-search-submit-button"
     >
       {t('search.submit')}
@@ -302,8 +303,8 @@ export function AdvancedSearchDialog({
     <FormRow label={label} htmlFor={fieldId(name)}>
       <TextField
         id={fieldId(name)}
-        variant="standard"
         fullWidth
+        size="small"
         placeholder={placeholder}
         value={fields[name]}
         onChange={handleText(name)}
@@ -466,6 +467,7 @@ export function AdvancedSearchDialog({
           <Box className="u-ml-half u-flex">
             <Tooltip title={t('dateRange.selectDate')}>
               <IconButton
+                size="small"
                 aria-label={t('dateRange.selectDate')}
                 aria-haspopup="dialog"
                 aria-describedby={fieldId('date')}
@@ -475,7 +477,7 @@ export function AdvancedSearchDialog({
                 }}
                 data-testid="advanced-search-date-button"
               >
-                <Icon icon={Calendar} />
+                <Icon icon={CalendarToday} />
               </IconButton>
             </Tooltip>
           </Box>
@@ -509,7 +511,7 @@ export function AdvancedSearchDialog({
           ))}
         </TextField>
       </FormRow>
-      <Box className="u-flex u-flex-wrap u-mt-1">
+      <Box className="u-flex u-flex-wrap u-mt-half">
         {(
           [
             ['hasAttachment', 'search.filters.hasAttachment'],
@@ -518,13 +520,19 @@ export function AdvancedSearchDialog({
             ['notIncludeEvents', 'search.filters.notIncludeEvents']
           ] as const
         ).map(([name, label]) => (
-          <LabeledCheckbox
+          <FormControlLabel
             key={name}
             label={t(label)}
-            checked={draft[name]}
-            onChange={checked => {
-              setDraft({ ...draft, [name]: checked })
-            }}
+            className="u-mr-half"
+            slotProps={{ typography: { variant: 'body2' } }}
+            control={
+              <Checkbox
+                checked={draft[name]}
+                onChange={event => {
+                  setDraft({ ...draft, [name]: event.target.checked })
+                }}
+              />
+            }
           />
         ))}
       </Box>
@@ -540,10 +548,10 @@ export function AdvancedSearchDialog({
         title={t('search.advanced')}
         data-testid="advanced-search-dialog"
       >
-        {/* tmail-flutter: 24 px above and below, 32 px on the sides */}
-        <form onSubmit={handleSubmit} noValidate className="u-pv-1-half u-ph-2">
+        {/* As the Figma: 24 px around, 16 px above the buttons */}
+        <form onSubmit={handleSubmit} noValidate className="u-p-1-half">
           {rows}
-          <Box className="u-flex u-flex-justify-end u-flex-items-center u-mt-1-half">
+          <Box className="u-flex u-flex-justify-end u-flex-items-center u-mt-1">
             {clearButton}
             <Box className="u-ml-half">{submitButton}</Box>
           </Box>
@@ -585,6 +593,7 @@ export function AdvancedSearchDialog({
           <Button
             variant="outlined"
             color="inherit"
+            size="large"
             onClick={onClose}
             data-testid="advanced-search-cancel-button"
           >

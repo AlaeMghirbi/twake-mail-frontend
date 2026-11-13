@@ -22,6 +22,7 @@ import {
   type ReactElement
 } from 'react'
 
+import { StackedField } from '@/ds/StackedField/StackedField'
 import { useScreenSize } from '@/ds/useScreenSize/useScreenSize'
 import { useConfirm } from '@common/features/confirm/ConfirmProvider'
 import { validateIdentityName } from '@common/features/identities/identityForm'
@@ -327,25 +328,26 @@ export function RuleFormDialog({
       data-testid="rule-form-dialog"
       content={
         <form id={formId} onSubmit={handleSubmit} noValidate>
-          <TextField
-            id={nameId}
-            inputRef={nameRef}
-            autoFocus
-            required
-            fullWidth
-            size="small"
-            label={t('rules.form.name')}
-            placeholder={t('rules.form.namePlaceholder')}
-            value={draft.name}
-            onChange={event => {
-              update({ name: event.target.value })
-            }}
-            error={isTouched && nameProblem !== null}
-            helperText={
-              isTouched && nameProblem !== null ? t(nameProblem) : undefined
-            }
-            slotProps={{ htmlInput: { 'data-testid': 'rule-name-input' } }}
-          />
+          <StackedField label={t('rules.form.name')} htmlFor={nameId}>
+            <TextField
+              id={nameId}
+              inputRef={nameRef}
+              autoFocus
+              required
+              fullWidth
+              size="small"
+              placeholder={t('rules.form.namePlaceholder')}
+              value={draft.name}
+              onChange={event => {
+                update({ name: event.target.value })
+              }}
+              error={isTouched && nameProblem !== null}
+              helperText={
+                isTouched && nameProblem !== null ? t(nameProblem) : undefined
+              }
+              slotProps={{ htmlInput: { 'data-testid': 'rule-name-input' } }}
+            />
+          </StackedField>
           <Box role="group" aria-labelledby={conditionsId}>
             {/* As tmail-flutter: "Preview" at the end of the label, on a
             desktop and a tablet, says what the rule does in words */}

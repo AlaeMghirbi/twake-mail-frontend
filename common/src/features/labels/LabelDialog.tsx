@@ -1,7 +1,5 @@
 import {
-  Box,
   Button,
-  ColorList,
   COLORS,
   FixedDialog,
   TextField,
@@ -18,13 +16,17 @@ import {
   type ReactElement
 } from 'react'
 
+import { ColorPopoverPicker } from '@/ds/ColorPopoverPicker/ColorPopoverPicker'
 import { normalizeHexColor } from '@/ds/ColorSwatchPicker/hexColor'
+import { LiveRegion } from '@/ds/LiveRegion/LiveRegion'
+import { StackedField } from '@/ds/StackedField/StackedField'
 import { validateIdentityName } from '@common/features/identities/identityForm'
 import { useNotify } from '@common/features/notifications/NotificationsProvider'
 import { useI18n, type TranslationKey } from '@common/i18n/useI18n'
 import { useJmapClient } from '@common/jmap/JmapClientProvider'
 import { useJmapSession } from '@common/jmap/JmapSessionProvider'
 
+import { LABEL_PALETTE } from './labelPalette'
 import { labelKeys, useLabels } from './queries'
 
 export interface LabelDialogProps {
@@ -81,9 +83,10 @@ export function LabelDialog({
   )
   const [hex, setHex] = useState(color ?? '')
   const isColorValid = !isCustom || normalizeHexColor(hex) !== null
-  const colorLegendId = useId()
   const [isTouched, setIsTouched] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  // Each refused submit remounts the announced problem, said again then
+  const [failedSubmits, setFailedSubmits] = useState(0)
   const hexRef = useRef<HTMLInputElement>(null)
   const [isSaving, setIsSaving] = useState(false)
   // The dialog takes the focus as it opens: the name gets it once there
@@ -130,6 +133,7 @@ export function LabelDialog({
     setIsTouched(true)
     setIsSubmitted(true)
     if (problem !== null) {
+      setFailedSubmits(count => count + 1)
       nameRef.current?.focus()
       return
     }
@@ -170,23 +174,58 @@ export function LabelDialog({
       })
   }
 
+  const colorName = (value: string): string => {
+    const key = LABEL_PALETTE[value.toUpperCase()]
+    return key === undefined ? value : t(key)
+  }
+
   const nameField = (
-    <TextField
-      id={nameId}
-      inputRef={nameRef}
-      required
-      fullWidth
-      label={t('labels.form.name')}
-      placeholder={t('labels.form.namePlaceholder')}
-      value={name}
-      onChange={event => {
-        setName(event.target.value)
-        setIsTouched(true)
-      }}
-      error={shownProblem !== null}
-      helperText={shownProblem === null ? undefined : t(shownProblem)}
-      slotProps={{ htmlInput: { 'data-testid': 'label-name-input' } }}
-    />
+    <StackedField label={t('labels.form.name')} htmlFor={nameId}>
+      <div className="u-flex u-flex-items-start">
+        <TextField
+          id={nameId}
+          inputRef={nameRef}
+          required
+          fullWidth
+          size="small"
+          placeholder={t('labels.form.namePlaceholder')}
+          value={name}
+          onChange={event => {
+            setName(event.target.value)
+            setIsTouched(true)
+          }}
+          error={shownProblem !== null}
+          helperText={shownProblem === null ? undefined : t(shownProblem)}
+          slotProps={{ htmlInput: { 'data-testid': 'label-name-input' } }}
+        />
+        <span className="u-ml-half u-flex">
+          <ColorPopoverPicker
+            buttonLabel={t('labels.form.colorCurrent', {
+              color: color === null ? t('labels.colorNone') : colorName(color)
+            })}
+            groupLabel={t('labels.form.color')}
+            swatches={COLORS.map(value => ({ value, label: colorName(value) }))}
+            value={color}
+            // tmail-backend refuses a null colour: a colour cannot be taken
+            // off, so "No color" is only offered to a label without one
+            noneLabel={
+              (label?.color ?? null) === null ? t('labels.colorNone') : null
+            }
+            customLabel={t('labels.colorHex')}
+            isCustom={isCustom}
+            onChange={picked => {
+              setIsCustom(false)
+              setColor(picked)
+            }}
+            onCustom={() => {
+              setIsCustom(true)
+              setHex(color ?? '')
+            }}
+            data-testid="label-color-picker"
+          />
+        </span>
+      </div>
+    </StackedField>
   )
 
   return (
@@ -199,7 +238,12 @@ export function LabelDialog({
       onClose={isSaving ? () => undefined : onClose}
       content={
         <form id={formId} onSubmit={handleSubmit} noValidate>
-          <Typography component="p" className="u-mb-1">
+          <LiveRegion data-testid="label-name-announcement">
+            {shownProblem === null ? null : (
+              <span key={failedSubmits}>{t(shownProblem)}</span>
+            )}
+          </LiveRegion>
+          <Typography component="p" className="u-mb-1-half">
             {t(
               label === null
                 ? 'labels.form.createSubtitle'
@@ -207,89 +251,52 @@ export function LabelDialog({
             )}
           </Typography>
           {nameField}
-          <TextField
-            id={descriptionId}
-            multiline
-            minRows={3}
-            fullWidth
-            className="u-mt-1"
-            label={t('labels.form.description')}
-            placeholder={t('labels.form.descriptionPlaceholder')}
-            value={description}
-            onChange={event => {
-              setDescription(event.target.value)
-            }}
-            slotProps={{
-              htmlInput: { 'data-testid': 'label-description-input' }
-            }}
-          />
-          <Box className="u-mt-1-half">
-            <Typography
-              id={colorLegendId}
-              component="p"
-              variant="subtitle2"
-              className="u-mb-half"
-            >
-              {t('labels.form.color')}
-            </Typography>
-            <ColorList
-              aria-labelledby={colorLegendId}
-              selectedColor={isCustom ? undefined : (color ?? undefined)}
-              onClick={picked => {
-                setIsCustom(false)
-                setColor(picked)
+          {isCustom ? (
+            <TextField
+              fullWidth
+              size="small"
+              className="u-mt-1"
+              label={t('labels.colorHex')}
+              value={hex}
+              inputRef={hexRef}
+              onChange={event => {
+                setHex(event.target.value)
+                const typed = normalizeHexColor(event.target.value)
+                if (typed !== null) setColor(typed)
               }}
-              customColorProps={{
-                enabled: true,
-                onClick: () => {
-                  setIsCustom(true)
-                  setHex(color ?? '')
-                }
+              error={isSubmitted && !isColorValid}
+              helperText={t(
+                isSubmitted && !isColorValid
+                  ? 'labels.colorHexInvalid'
+                  : 'labels.colorHexHint'
+              )}
+              slotProps={{
+                htmlInput: { 'data-testid': 'label-color-hex-input' },
+                formHelperText:
+                  isSubmitted && !isColorValid ? { role: 'alert' } : undefined
               }}
-              data-testid="label-color-picker"
             />
-            {/* tmail-backend refuses a null colour: a colour cannot be taken
-                off, so "No color" is only offered to a label without one */}
-            {(label?.color ?? null) === null ? (
-              <Button
-                variant="text"
-                className="u-mt-half"
-                aria-pressed={!isCustom && color === null}
-                onClick={() => {
-                  setIsCustom(false)
-                  setColor(null)
-                }}
-                data-testid="label-color-none"
-              >
-                {t('labels.colorNone')}
-              </Button>
-            ) : null}
-            {isCustom ? (
-              <TextField
-                fullWidth
-                className="u-mt-1"
-                label={t('labels.colorHex')}
-                value={hex}
-                inputRef={hexRef}
-                onChange={event => {
-                  setHex(event.target.value)
-                  const typed = normalizeHexColor(event.target.value)
-                  if (typed !== null) setColor(typed)
-                }}
-                error={isSubmitted && !isColorValid}
-                helperText={t(
-                  isSubmitted && !isColorValid
-                    ? 'labels.colorHexInvalid'
-                    : 'labels.colorHexHint'
-                )}
-                slotProps={{
-                  htmlInput: { 'data-testid': 'label-color-hex-input' },
-                  formHelperText:
-                    isSubmitted && !isColorValid ? { role: 'alert' } : undefined
-                }}
-              />
-            ) : null}
-          </Box>
+          ) : null}
+          <StackedField
+            label={t('labels.form.description')}
+            htmlFor={descriptionId}
+            className="u-mt-1-half"
+          >
+            <TextField
+              id={descriptionId}
+              multiline
+              fullWidth
+              size="small"
+              placeholder={t('labels.form.descriptionPlaceholder')}
+              value={description}
+              onChange={event => {
+                setDescription(event.target.value)
+              }}
+              slotProps={{
+                htmlInput: { 'data-testid': 'label-description-input' }
+              }}
+            />
+          </StackedField>
         </form>
       }
       actions={

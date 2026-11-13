@@ -13,6 +13,7 @@ import { MoreVerticalIcon } from '@/ds/ListIcons/ListIcons'
 import { CountBadge } from '@/ds/CountBadge/CountBadge'
 import { NavTreeItem } from '@/ds/NavTreeItem/NavTreeItem'
 import { RowTextAction } from '@/ds/RowTextAction/RowTextAction'
+import { useScreenSize } from '@/ds/useScreenSize/useScreenSize'
 import { useDropEmails } from '@common/features/emailActions/useDropEmails'
 import type { FolderMenuAnchor } from '@common/features/mailboxActions/FolderActionsMenu'
 import { useFolderActions } from '@common/features/mailboxActions/FolderActionsProvider'
@@ -32,7 +33,9 @@ import {
 } from './mailboxDisplay'
 import {
   isHiddenMailbox,
+  isSharedRoot,
   isTeamRoot,
+  sharedMailboxOwner,
   teamMailboxAddress,
   type VisibleMailbox
 } from './mailboxTree'
@@ -50,7 +53,7 @@ export interface MailboxTreeItemProps {
 }
 
 /** The menu key, or Shift+F10: the keyboard way to a context menu */
-function isMenuKey(event: KeyboardEvent<HTMLElement>): boolean {
+export function isMenuKey(event: KeyboardEvent<HTMLElement>): boolean {
   return event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)
 }
 
@@ -58,12 +61,13 @@ function isMenuKey(event: KeyboardEvent<HTMLElement>): boolean {
  * A folder of the sidebar tree: icon, name, expand arrow and unread count,
  * linking to the folder, where dragged emails can drop; a personal folder
  * dragged onto another moves under it (from the keyboard: "Move folder" in
- * its menu). Its menu opens from
- * the ⋮ button shown on hover or focus, a right click, the menu key or
- * Shift+F10. On the Spam, "Clean" empties it. A hidden folder, shown on
- * demand, has the icon of hidden folders and says so. The root of a team
- * mailbox is a container, as tmail-flutter: no link, no drop, a click opens
- * or closes it.
+ * its menu). Its menu opens from the ⋮ button shown on hover or focus, a
+ * right click, the menu key or Shift+F10, and on the Spam "Clean" empties
+ * it; below the desktop size (the drawer) neither button shows, a long
+ * press opens the menu, its "Empty" included. A hidden folder, shown on demand,
+ * has the icon of hidden folders and says so. The root of a team mailbox is
+ * a container, as tmail-flutter: no link, no drop, a click opens or closes
+ * it.
  */
 export function MailboxTreeItem({
   row,
@@ -75,6 +79,8 @@ export function MailboxTreeItem({
   const { t } = useI18n()
   const getName = useMailboxName()
   const folderActions = useFolderActions()
+  // A phone or a tablet: the drawer, its rows without buttons
+  const isDrawer = useScreenSize() !== 'desktop'
   const { mailbox } = row
   const toggleLabel = t(row.isExpanded ? 'mailbox.collapse' : 'mailbox.expand')
   // Keyboard users move emails from their menus: "Move message"
@@ -84,8 +90,13 @@ export function MailboxTreeItem({
   const name = getName(mailbox)
   const isHidden = isHiddenMailbox(mailbox)
   const isContainer = isTeamRoot(mailbox)
-  // The root of a team mailbox says its address
-  const address = isContainer ? teamMailboxAddress(mailbox) : null
+  // The root of a team mailbox says its address, a folder another user
+  // shares the address of its owner
+  const address = isContainer
+    ? teamMailboxAddress(mailbox)
+    : isSharedRoot(mailbox)
+      ? sharedMailboxOwner(mailbox)
+      : null
   const shownCount = showsUnreadCount(mailbox)
     ? { count: mailbox.unreadEmails, testId: 'mailbox-unread-count' }
     : showsTotalCount(mailbox)
@@ -144,7 +155,7 @@ export function MailboxTreeItem({
       icon={
         // As tmail-flutter, the root of a team mailbox has no icon, its
         // address under its name
-        address !== null ? null : isHidden ? (
+        isContainer && address !== null ? null : isHidden ? (
           // As tmail-flutter, a hidden folder takes the icon of the hidden
           // folders, with the word for who does not see it
           <Tooltip title={t('folders.hidden.label')}>
@@ -205,30 +216,41 @@ export function MailboxTreeItem({
         )
       }
       countText={shownCount === null ? undefined : String(shownCount.count)}
+      onLongPress={
+        isDrawer
+          ? element => {
+              onOpenMenu(mailbox, { element })
+            }
+          : undefined
+      }
+      longPressHint={t('folders.longPressHint')}
+      // In the drawer the long press opens the menu, "Empty" included
       actions={
-        <>
-          {canEmptySpam ? (
-            <RowTextAction
-              description={t('folders.menu.emptySpam')}
-              onClick={handleEmptySpam}
-              data-testid="mailbox-clean-button"
-            >
-              {t('folders.clean')}
-            </RowTextAction>
-          ) : null}
-          <Tooltip title={menuLabel}>
-            <IconButton
-              size="small"
-              aria-label={menuLabel}
-              aria-haspopup="menu"
-              onClick={handleOpenMenu}
-              data-testid="mailbox-more-button"
-            >
-              {/* As tmail-flutter: the vertical dots */}
-              <Icon icon={MoreVerticalIcon} />
-            </IconButton>
-          </Tooltip>
-        </>
+        isDrawer ? undefined : (
+          <>
+            {canEmptySpam ? (
+              <RowTextAction
+                description={t('folders.menu.emptySpam')}
+                onClick={handleEmptySpam}
+                data-testid="mailbox-clean-button"
+              >
+                {t('folders.clean')}
+              </RowTextAction>
+            ) : null}
+            <Tooltip title={menuLabel}>
+              <IconButton
+                size="small"
+                aria-label={menuLabel}
+                aria-haspopup="menu"
+                onClick={handleOpenMenu}
+                data-testid="mailbox-more-button"
+              >
+                {/* As tmail-flutter: the vertical dots */}
+                <Icon icon={MoreVerticalIcon} />
+              </IconButton>
+            </Tooltip>
+          </>
+        )
       }
       drop={isContainer ? undefined : drop}
       nameTestId="mailbox-item-name"

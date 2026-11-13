@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
+import { longPress } from '../support/longPress'
+
 /**
  * The labels: their section of the sidebar, the label modal (create,
  * edit) and the "Label as" modal.
@@ -14,8 +16,9 @@ export class LabelModals {
   readonly descriptionInput: Locator
   readonly saveButton: Locator
   readonly colorPicker: Locator
-  readonly customColorSwatch: Locator
-  readonly noColorButton: Locator
+  readonly colorOptions: Locator
+  readonly customColorOption: Locator
+  readonly noColorOption: Locator
   readonly customColorHexInput: Locator
   readonly chooseModal: Locator
   readonly chooseEmpty: Locator
@@ -30,11 +33,15 @@ export class LabelModals {
     this.nameInput = this.labelModal.getByTestId('label-name-input')
     this.descriptionInput = this.labelModal.getByTestId('label-description-input')
     this.saveButton = this.labelModal.getByTestId('label-save-button')
+    // The icon button beside the name; it opens the colours in a popover
     this.colorPicker = this.labelModal.getByTestId('label-color-picker')
-    // ColorList names neither its swatches (`div` buttons) nor its custom
-    // button, the only real `button`, until twake-ui#223 is published
-    this.customColorSwatch = this.colorPicker.locator('button')
-    this.noColorButton = this.labelModal.getByTestId('label-color-none')
+    this.colorOptions = page.getByTestId('label-color-picker-popover')
+    this.customColorOption = this.colorOptions.getByRole('radio', {
+      name: 'Custom color (hexadecimal)'
+    })
+    this.noColorOption = this.colorOptions.getByRole('radio', {
+      name: 'No color'
+    })
     this.customColorHexInput = this.labelModal.getByTestId(
       'label-color-hex-input'
     )
@@ -56,11 +63,16 @@ export class LabelModals {
     await expect(this.page.getByTestId('label-page')).toBeVisible()
   }
 
-  /** Runs Edit or Delete from the ⋮ menu of a label */
+  /** Runs Edit or Delete from the ⋮ menu of a label (a long press on a phone, which has no ⋮) */
   async runMenu(name: string, action: 'edit' | 'delete'): Promise<void> {
-    // The button shows on hover, or on focus
-    await this.item(name).hover()
-    await this.item(name).getByTestId('label-item-menu-button').click()
+    const more = this.item(name).getByTestId('label-item-menu-button')
+    if ((await more.count()) > 0) {
+      // The button shows on hover, or on focus
+      await this.item(name).hover()
+      await more.click()
+    } else {
+      await longPress(this.page, this.item(name).getByRole('link', { name, exact: true }))
+    }
     await this.page.getByTestId(`label-${action}-item`).click()
   }
 
@@ -73,14 +85,19 @@ export class LabelModals {
     await expect(this.labelModal).toBeHidden()
   }
 
-  /** A swatch of the colour picker of the label modal, by its position */
-  colorSwatch(position: number): Locator {
-    return this.colorPicker.locator('[role="button"]').nth(position)
+  colorOption(name: string): Locator {
+    return this.colorOptions.getByRole('radio', { name, exact: true })
+  }
+
+  async openColors(): Promise<void> {
+    await this.colorPicker.click()
+    await expect(this.colorOptions).toBeVisible()
   }
 
   /** Picks the custom colour by its hexadecimal field */
   async chooseCustomColor(hex: string): Promise<void> {
-    await this.customColorSwatch.click()
+    await this.openColors()
+    await this.customColorOption.click()
     await this.customColorHexInput.fill(hex)
   }
 
